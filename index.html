@@ -118,14 +118,15 @@ window.addEventListener('resize', resizeCanvas);
 
 // ==================== IMAGE LOADING ====================
 const images = {};
-const imageFiles = ['hero', 'goomba1', 'goomba2', 'goomba3', 'koopa1', 'koopa2', 'queen'];
+const imageFiles = ['hero', 'goomba1', 'goomba2', 'goomba3', 'koopa1', 'koopa2', 'queen', 'april-fool'];
+const imageExtensions = { 'april-fool': 'jpg' };
 let imagesLoaded = 0;
 
 imageFiles.forEach(name => {
   const img = new Image();
   img.onload = () => { imagesLoaded++; if (imagesLoaded === imageFiles.length) init(); };
   img.onerror = () => { imagesLoaded++; if (imagesLoaded === imageFiles.length) init(); };
-  img.src = 'assets/' + name + '.png';
+  img.src = 'assets/' + name + '.' + (imageExtensions[name] || 'png');
   images[name] = img;
 });
 
@@ -369,6 +370,10 @@ let player, enemies, items, particles, platforms, pipes, blocks, flagPole, queen
 let groundSegments = [];
 let mushrooms = [];
 let titleMusicStarted = false;
+let endingPhase = 0; // 0=flag slide, 1=walk to castle, 2=queen emerges, 3=hug, 4=voucher screen
+let endingTimer = 0;
+let showAprilFool = false;
+let castleX = 0; // set during buildLevel
 
 // ==================== LEVEL BUILDER ====================
 function buildLevel() {
@@ -455,8 +460,9 @@ function buildLevel() {
   for (let i = 0; i < 8; i++) for (let j = 0; j <= i; j++)
     platforms.push({ x: (250+i)*TILE, y: groundY-(j+1)*TILE, w: TILE, h: TILE, type: 'stair' });
 
-  flagPole = { x: 260*TILE, y: groundY - TILE*10, w: 8, h: TILE*10 };
-  queenEntity = { x: 264*TILE, y: groundY - 56, w: 36, h: 56 };
+  flagPole = { x: 258*TILE, y: groundY - TILE*10, w: 8, h: TILE*10 };
+  castleX = 264*TILE;
+  queenEntity = { x: castleX + TILE*2, y: groundY - 50, w: 36, h: 50, visible: false };
 
   // Floating coins
   const coinPositions = [
@@ -603,8 +609,51 @@ function update() {
     return;
   }
   if (gameState === 'LEVEL_COMPLETE') {
-    levelCompleteTimer--;
-    if (levelCompleteTimer<=0 && keysJustPressed['Space']) { score=0; coins=0; lives=3; stopMusic(); startGame(); playOverworldMusic(); }
+    endingTimer++;
+
+    if (endingPhase === 0) {
+      // Phase 0: Mario auto-walks toward castle
+      player.vx = 2; player.facingRight = true;
+      player.vy += GRAVITY_FULL;
+      const solids = getSolidsNear(player.x, CANVAS_WIDTH).filter(s => !(s.type==='brick'&&s.hit));
+      player.x += player.vx;
+      resolveCollisionsX(player, solids);
+      player.y += player.vy;
+      resolveCollisionsY(player, solids, false);
+      // Walk animation
+      player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
+      // Camera follows
+      const targetCam = player.x - CANVAS_WIDTH/3;
+      const newCamX = Math.floor(Math.max(0, Math.min(targetCam, LEVEL_WIDTH-CANVAS_WIDTH)));
+      if (newCamX > camera.x) camera.x = newCamX;
+      // Reached castle
+      if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; }
+    }
+    else if (endingPhase === 1) {
+      // Phase 1: Queen emerges from castle
+      if (endingTimer === 1) { queenEntity.visible = true; queenEntity.x = castleX + TILE*2; }
+      if (endingTimer < 60) {
+        queenEntity.x -= 0.8; // Walk out
+      }
+      if (endingTimer >= 60) { endingPhase = 2; endingTimer = 0; }
+    }
+    else if (endingPhase === 2) {
+      // Phase 2: They move toward each other (hug)
+      if (endingTimer < 40) {
+        if (Math.abs(player.x - queenEntity.x) > 10) {
+          player.x += 1; player.facingRight = true;
+          player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
+        }
+      }
+      if (endingTimer >= 60) { endingPhase = 3; endingTimer = 0; }
+    }
+    else if (endingPhase === 3) {
+      // Phase 3: Hug animation (hearts) then show voucher after delay
+      if (endingTimer >= 120) { endingPhase = 4; endingTimer = 0; }
+    }
+    // Phase 4: Voucher screen (handled in draw)
+    // Phase 5: April Fool (handled via click in HTML overlay)
+
     keysJustPressed['Space'] = false;
     return;
   }
@@ -645,7 +694,8 @@ function update() {
   if (player.y>CANVAS_HEIGHT+50) { playerDie(); return; }
 
   if (flagPole && player.x+player.w > flagPole.x && player.x < flagPole.x+flagPole.w+20) {
-    gameState='LEVEL_COMPLETE'; levelCompleteTimer=180; score+=timer*50; stopMusic(); playSFX('levelcomplete');
+    gameState='LEVEL_COMPLETE'; endingPhase=0; endingTimer=0; showAprilFool=false;
+    score+=timer*50; stopMusic(); playSFX('levelcomplete');
     return;
   }
 
@@ -979,6 +1029,60 @@ function drawGroundTile(sx, sy) {
 }
 
 // ==================== MAIN DRAW ====================
+function drawCastle(cx, groundY) {
+  const w = TILE*5, h = TILE*5;
+  const cy = groundY - h;
+  // Main body
+  ctx.fillStyle = C.STAIR;
+  ctx.fillRect(cx, cy + TILE, w, h - TILE);
+  // Battlements (top)
+  for (let i = 0; i < 5; i++) {
+    if (i % 2 === 0) {
+      ctx.fillRect(cx + i*TILE, cy, TILE, TILE);
+    }
+  }
+  // Dark mortar lines
+  ctx.strokeStyle = C.STAIR_DARK; ctx.lineWidth = 1;
+  for (let row = 0; row < 5; row++) {
+    for (let col = 0; col < 5; col++) {
+      const bx = cx + col*TILE, by2 = cy + TILE + row*TILE;
+      if (by2 < groundY) ctx.strokeRect(bx, by2, TILE, TILE);
+    }
+  }
+  // Door (dark arch)
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(cx + w/2, groundY - TILE*1.5, TILE*0.8, Math.PI, 0);
+  ctx.lineTo(cx + w/2 + TILE*0.8, groundY);
+  ctx.lineTo(cx + w/2 - TILE*0.8, groundY);
+  ctx.fill();
+  // Window
+  ctx.fillStyle = '#000';
+  ctx.fillRect(cx + w/2 - TILE*0.4, cy + TILE*1.5, TILE*0.8, TILE*0.6);
+  // Flag on top
+  ctx.fillStyle = '#666';
+  ctx.fillRect(cx + w/2 - 2, cy - TILE*1.5, 4, TILE*1.5);
+  ctx.fillStyle = '#FF4444';
+  ctx.beginPath();
+  ctx.moveTo(cx + w/2 + 2, cy - TILE*1.5);
+  ctx.lineTo(cx + w/2 + TILE, cy - TILE*1.2);
+  ctx.lineTo(cx + w/2 + 2, cy - TILE*0.9);
+  ctx.fill();
+}
+
+function drawHearts(cx, cy) {
+  const t = Date.now() / 300;
+  for (let i = 0; i < 5; i++) {
+    const hx = cx + Math.sin(t + i*1.3) * 30;
+    const hy = cy - 20 - i*12 - Math.sin(t*2 + i)*5;
+    const alpha = 1 - i*0.15;
+    ctx.fillStyle = `rgba(255,50,80,${alpha})`;
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2764', hx, hy);
+  }
+}
+
 function draw() {
   // Sky — solid NES blue
   ctx.fillStyle = C.SKY;
@@ -1106,7 +1210,16 @@ function draw() {
   }
 
   // Queen
-  if (queenEntity) {
+  // Castle
+  if (castleX) {
+    const csx = castleX - camera.x;
+    if (csx > -200 && csx < CANVAS_WIDTH + 200) {
+      drawCastle(csx, CANVAS_HEIGHT - TILE*2);
+    }
+  }
+
+  // Queen (only visible after emerging from castle)
+  if (queenEntity && queenEntity.visible) {
     const sx=queenEntity.x-camera.x;
     if (sx>-60&&sx<CANVAS_WIDTH+60) drawQueen(images.queen,queenEntity.x,queenEntity.y,queenEntity.w,queenEntity.h);
   }
@@ -1161,13 +1274,70 @@ function draw() {
   drawHUD();
 
   if (gameState==='LEVEL_COMPLETE') {
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
-    ctx.fillStyle=C.COIN_GOLD; ctx.font='bold 56px Arial'; ctx.textAlign='center';
-    ctx.fillText('LEVEL COMPLETE!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-40);
-    ctx.fillStyle=C.TEXT_WHITE; ctx.font='28px Arial';
-    ctx.fillText('Score: '+score,CANVAS_WIDTH/2,CANVAS_HEIGHT/2+10);
-    ctx.font='20px Arial';
-    ctx.fillText('Press SPACE to Play Again',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+50);
+    // Draw hearts during hug phase
+    if (endingPhase >= 2 && endingPhase <= 3) {
+      const px = player.x - camera.x;
+      drawHearts(px + player.w/2, player.y - 10);
+    }
+
+    // Voucher screen (phase 4)
+    if (endingPhase >= 4 && !showAprilFool) {
+      ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
+
+      ctx.fillStyle=C.COIN_GOLD; ctx.font='bold 36px "Courier New", monospace'; ctx.textAlign='center';
+      ctx.fillText('CONGRATULATIONS!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-80);
+
+      ctx.fillStyle=C.TEXT_WHITE; ctx.font='22px "Courier New", monospace';
+      ctx.fillText("You've Won!",CANVAS_WIDTH/2,CANVAS_HEIGHT/2-40);
+
+      ctx.fillStyle=C.TEXT_WHITE; ctx.font='20px "Courier New", monospace';
+      ctx.fillText('Score: '+score,CANVAS_WIDTH/2,CANVAS_HEIGHT/2);
+
+      // Clickable voucher button
+      ctx.fillStyle='#E80000';
+      const btnX=CANVAS_WIDTH/2-180, btnY=CANVAS_HEIGHT/2+30, btnW=360, btnH=50;
+      ctx.beginPath(); ctx.roundRect(btnX,btnY,btnW,btnH,10); ctx.fill();
+      ctx.fillStyle='#FFF'; ctx.font='bold 18px "Courier New", monospace';
+      ctx.fillText('Click to Claim $1000 Claude Voucher',CANVAS_WIDTH/2,btnY+32);
+
+      // Store button bounds for click detection
+      window._voucherBtn = {x:btnX,y:btnY,w:btnW,h:btnH};
+    }
+
+    // April Fool screen (after clicking voucher)
+    if (showAprilFool) {
+      ctx.fillStyle='#F5F0C8'; ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
+
+      // Draw chimp image
+      if (images['april-fool'] && images['april-fool'].complete) {
+        const imgW=320, imgH=240;
+        ctx.drawImage(images['april-fool'], CANVAS_WIDTH/2-imgW/2, CANVAS_HEIGHT/2-imgH/2-30, imgW, imgH);
+      }
+
+      ctx.fillStyle='#333'; ctx.font='bold 32px "Courier New", monospace'; ctx.textAlign='center';
+      ctx.fillText('HAPPY APRIL FOOLS DAY!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+160);
+
+      ctx.fillStyle='#666'; ctx.font='16px "Courier New", monospace';
+      ctx.fillText('You really thought you won $1000? 😂',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+195);
+
+      // Share buttons
+      const shareY = CANVAS_HEIGHT/2 + 230;
+      // LinkedIn
+      ctx.fillStyle='#0A66C2';
+      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2-170,shareY,160,36,8); ctx.fill();
+      ctx.fillStyle='#FFF'; ctx.font='bold 14px "Courier New", monospace';
+      ctx.fillText('Share on LinkedIn',CANVAS_WIDTH/2-90,shareY+24);
+
+      // Copy link
+      ctx.fillStyle='#333';
+      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2+10,shareY,160,36,8); ctx.fill();
+      ctx.fillStyle='#FFF';
+      ctx.fillText('Copy Link',CANVAS_WIDTH/2+90,shareY+24);
+
+      // Store button bounds
+      window._linkedinBtn = {x:CANVAS_WIDTH/2-170,y:shareY,w:160,h:36};
+      window._copyBtn = {x:CANVAS_WIDTH/2+10,y:shareY,w:160,h:36};
+    }
   }
 }
 
@@ -1263,6 +1433,40 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 function init() { requestAnimationFrame(gameLoop); }
+
+// Canvas click handler for ending sequence buttons
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CANVAS_WIDTH / rect.width;
+  const scaleY = CANVAS_HEIGHT / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  function hitTest(btn) {
+    return btn && mx >= btn.x && mx <= btn.x+btn.w && my >= btn.y && my <= btn.y+btn.h;
+  }
+
+  // Voucher button → April Fool reveal
+  if (gameState==='LEVEL_COMPLETE' && endingPhase>=4 && !showAprilFool && hitTest(window._voucherBtn)) {
+    showAprilFool = true;
+  }
+
+  // LinkedIn share
+  if (showAprilFool && hitTest(window._linkedinBtn)) {
+    const shareUrl = window.location.origin + window.location.pathname;
+    const text = "I just played Dhurandhar Mario and fell for the April Fool's prank! 😂🎮 Try it yourself:";
+    window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(shareUrl)+'&summary='+encodeURIComponent(text), '_blank');
+  }
+
+  // Copy link
+  if (showAprilFool && hitTest(window._copyBtn)) {
+    const shareUrl = window.location.origin + window.location.pathname;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      window._copyMsg = 'Copied!';
+      setTimeout(() => { window._copyMsg = ''; }, 2000);
+    });
+  }
+});
 
 // Close button — stops all audio and closes
 document.getElementById('close-btn').addEventListener('click', () => {
