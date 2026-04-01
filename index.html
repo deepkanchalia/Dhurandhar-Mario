@@ -620,6 +620,136 @@ body {
   setInterval(updateTimer, 1000);
 })();
 
+// ==================== LANDING PAGE MUSIC ====================
+let landingAudioCtx = null;
+let landingMusicPlaying = false;
+let landingMusicTimer = null;
+
+function playLandingMusic() {
+  if (landingMusicPlaying) return;
+  landingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  landingMusicPlaying = true;
+
+  const bpm = 110;
+  const b = 60 / bpm;
+
+  // Dramatic Dhurandhar theme — Indian scale, heavy bass, robotic feel
+  // Using Bhairavi-ish scale with electronic/synth texture
+  const melody = [
+    // "Dhurandhar" spelled out musically — each syllable is a note
+    // DHU - RAN - DHAR (3 heavy hits)
+    [196,2],[0,0.5],[262,1.5],[0,0.5],[196,2.5],[0,1],
+    // Ascending tension
+    [220,1],[247,1],[262,1],[294,1],[330,2],[0,1],
+    // DHU - RAN - DHAR repeat (higher)
+    [392,2],[0,0.5],[523,1.5],[0,0.5],[392,2.5],[0,1],
+    // Descending resolve
+    [349,1],[330,1],[294,1],[262,1],[247,1],[220,1],[196,3],[0,1],
+    // Robotic staccato section
+    [262,0.5],[262,0.5],[0,0.25],[330,0.5],[330,0.5],[0,0.25],
+    [392,0.5],[392,0.5],[0,0.25],[523,0.5],[523,0.5],[0,0.5],
+    // Final dramatic descent
+    [523,1],[494,0.5],[440,0.5],[392,1],[349,0.5],[330,0.5],[294,1],[262,1],[196,3],[0,2],
+  ];
+
+  // Heavy bass + tabla rhythm
+  const bass = [
+    [98,1.5],[0,0.5],[98,0.5],[0,0.5],[131,1],[0,1],
+    [98,1.5],[0,0.5],[98,0.5],[0,0.5],[131,1],[0,1],
+    [131,1.5],[0,0.5],[131,0.5],[0,0.5],[175,1],[0,1],
+    [131,1],[98,0.5],[98,0.5],[131,1],[175,0.5],[175,0.5],[131,1],[98,2],[0,1],
+    [98,0.5],[98,0.5],[0,0.25],[98,0.5],[98,0.5],[0,0.25],
+    [131,0.5],[131,0.5],[0,0.25],[131,0.5],[131,0.5],[0,0.5],
+    [175,1],[131,0.5],[131,0.5],[98,1],[98,0.5],[98,0.5],[98,1],[98,1],[65,3],[0,2],
+  ];
+
+  function playNote(freq, start, dur, type, vol) {
+    if (!landingAudioCtx) return;
+    const osc = landingAudioCtx.createOscillator();
+    const gain = landingAudioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.connect(gain);
+    gain.connect(landingAudioCtx.destination);
+    osc.start(start);
+    osc.stop(start + dur);
+  }
+
+  // Robotic voice effect — sawtooth + vibrato for "electronic" texture
+  function playRoboNote(freq, start, dur) {
+    if (!landingAudioCtx) return;
+    const osc = landingAudioCtx.createOscillator();
+    const vibrato = landingAudioCtx.createOscillator();
+    const vibratoGain = landingAudioCtx.createGain();
+    const gain = landingAudioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    vibrato.type = 'sine';
+    vibrato.frequency.value = 6; // 6Hz vibrato for robotic warble
+    vibratoGain.gain.value = 8; // Subtle pitch wobble
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+
+    gain.gain.setValueAtTime(0.04, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.connect(gain);
+    gain.connect(landingAudioCtx.destination);
+    osc.start(start);
+    osc.stop(start + dur);
+    vibrato.start(start);
+    vibrato.stop(start + dur);
+  }
+
+  function scheduleLoop() {
+    if (!landingMusicPlaying) return;
+    const now = landingAudioCtx.currentTime;
+    let t = now + 0.1;
+
+    // Melody — robotic sawtooth with vibrato
+    melody.forEach(([freq, beats]) => {
+      if (freq > 0) playRoboNote(freq, t, b * beats * 0.85);
+      t += b * beats;
+    });
+
+    // Bass — deep triangle wave
+    let bt = now + 0.1;
+    bass.forEach(([freq, beats]) => {
+      if (freq > 0) playNote(freq, bt, b * beats * 0.7, 'triangle', 0.07);
+      bt += b * beats;
+    });
+
+    // Percussion hits on downbeats
+    let pt = now + 0.1;
+    for (let i = 0; i < 24; i++) {
+      playNote(80 + Math.random()*40, pt, 0.08, 'square', 0.03);
+      pt += b * 2;
+    }
+
+    const loopLen = t - now;
+    landingMusicTimer = setTimeout(() => scheduleLoop(), (loopLen - 0.5) * 1000);
+  }
+  scheduleLoop();
+}
+
+function stopLandingMusic() {
+  landingMusicPlaying = false;
+  if (landingMusicTimer) { clearTimeout(landingMusicTimer); landingMusicTimer = null; }
+  if (landingAudioCtx) { landingAudioCtx.close().catch(()=>{}); landingAudioCtx = null; }
+}
+
+// Start music on first interaction
+let landingMusicStarted = false;
+function initLandingMusic() {
+  if (landingMusicStarted) return;
+  landingMusicStarted = true;
+  playLandingMusic();
+}
+document.addEventListener('click', initLandingMusic, { once: true });
+document.addEventListener('keydown', initLandingMusic, { once: true });
+
 // Screen management
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -643,6 +773,7 @@ function handleAuth(e) {
 }
 
 function selectPlayer(num) {
+  stopLandingMusic();
   const data = JSON.parse(sessionStorage.getItem('dhurandhar_player') || '{}');
   data.player = num;
   sessionStorage.setItem('dhurandhar_player', JSON.stringify(data));
