@@ -278,7 +278,7 @@ function playSFX(type) {
 }
 
 // Mario Overworld Theme (chiptune approximation)
-function playOverworldMusic() {
+function playRasputin() {
   ensureAudio();
   if (!audioCtx) return;
   stopMusic();
@@ -286,37 +286,33 @@ function playOverworldMusic() {
   musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
   musicPlaying = true;
 
-  const bpm = 200;
-  const beatLen = 60 / bpm;
+  const bpm = 128;
+  const b = 60 / bpm;
 
-  // Melody (simplified Mario overworld)
   const melody = [
-    // Bar 1-2 (iconic opening)
-    [659,1],[659,1],[0,1],[659,1],[0,1],[523,1],[659,2],
-    [784,2],[0,2],[392,2],[0,2],
-    // Bar 3-4
-    [523,2],[0,1],[392,2],[0,1],[330,2],[0,1],
-    [440,2],[494,1],[466,1],[440,2],
-    // Bar 5-6
-    [392,1.5],[659,1.5],[784,1],[880,2],[698,1],[784,1],
-    [0,1],[659,2],[523,1],[587,1],[494,1],[0,1],
-    // Bar 7-8 (repeat with variation)
-    [523,2],[0,1],[392,2],[0,1],[330,2],[0,1],
-    [440,2],[494,1],[466,1],[440,2],
-    [392,1.5],[659,1.5],[784,1],[880,2],[698,1],[784,1],
-    [0,1],[659,2],[523,1],[587,1],[494,1],[0,1],
+    [494,1],[0,0.5],[494,0.5],[440,0.5],[494,0.5],[587,1],[494,1],[0,1],
+    [494,1],[0,0.5],[494,0.5],[440,0.5],[494,0.5],[659,1],[587,1],[0,1],
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [440,0.5],[494,0.5],[440,0.5],[370,1],[330,1],[0,0.5],
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [494,0.5],[440,0.5],[370,0.5],[330,1],[370,1],[0,1],
+    [494,0.5],[494,0.5],[587,0.5],[659,0.5],[740,1],[659,0.5],[587,0.5],[494,1],[0,0.5],
+    [440,0.5],[494,0.5],[440,0.5],[370,1],[330,2],[0,1],
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [494,0.5],[440,0.5],[370,0.5],[330,1],[370,2],[0,2],
   ];
 
-  // Bass line
   const bass = [
-    [196,2],[196,2],[196,2],[196,2],
-    [262,2],[262,2],[196,2],[196,2],
-    [175,2],[175,2],[220,2],[220,2],
-    [196,2],[262,2],[330,2],[262,2],
-    [175,2],[175,2],[220,2],[220,2],
-    [196,2],[262,2],[330,2],[262,2],
-    [175,2],[175,2],[220,2],[220,2],
-    [196,2],[262,2],[330,2],[262,2],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[165,0.5],[0,0.5],[165,0.5],[0,0.5],
+    [185,0.5],[0,0.5],[185,0.5],[0,0.5],[123,0.5],[0,0.5],[123,1],[0,1],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,1],
   ];
 
   function scheduleLoop() {
@@ -324,18 +320,30 @@ function playOverworldMusic() {
     const now = audioCtx.currentTime;
     let t = now + 0.1;
 
-    // Melody — routed through musicGain so stopMusic() can mute
     melody.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, t, beatLen * beats * 0.9, 'square', 0.05, musicGain);
-      t += beatLen * beats;
+      if (freq > 0) playNote(freq, t, b*beats*0.85, 'square', 0.05, musicGain);
+      t += b * beats;
     });
 
-    // Bass
     let bt = now + 0.1;
     bass.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, bt, beatLen * beats * 0.8, 'triangle', 0.06, musicGain);
-      bt += beatLen * beats;
+      if (freq > 0) playNote(freq, bt, b*beats*0.7, 'triangle', 0.06, musicGain);
+      bt += b * beats;
     });
+
+    // Hi-hat
+    let ht = now + 0.1;
+    const totalBeats = melody.reduce((s,[,beats]) => s+beats, 0);
+    for (let i = 0; i < totalBeats*2; i++) {
+      playNote(8000+Math.random()*2000, ht, 0.03, 'square', 0.012, musicGain);
+      ht += b * 0.5;
+    }
+    // Kick
+    let kt = now + 0.1;
+    for (let i = 0; i < totalBeats/2; i++) {
+      playNote(55, kt, 0.1, 'triangle', 0.07, musicGain);
+      kt += b * 2;
+    }
 
     const loopLen = t - now;
     currentMusic = setTimeout(() => scheduleLoop(), (loopLen - 0.5) * 1000);
@@ -343,47 +351,22 @@ function playOverworldMusic() {
   scheduleLoop();
 }
 
-// Dhurandhar Title Theme (dramatic Bollywood-style chiptune)
-function playTitleMusic() {
-  ensureAudio();
-  if (!audioCtx) return;
-  musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
-  musicPlaying = true;
+function playOverworldMusic() { playRasputin(); }
 
-  const bpm = 120;
-  const b = 60 / bpm;
+function playTitleMusic() { playRasputin(); }
 
-  // Dramatic intro — Indian scale feel (Bhairavi-ish)
-  const melody = [
-    [262,2],[294,1],[311,2],[294,1],[262,2],[247,1],[262,3],[0,2],
-    [392,2],[370,1],[349,2],[330,1],[294,2],[262,1],[294,3],[0,2],
-    [262,2],[294,1],[311,2],[349,2],[392,2],[370,1],[349,3],[0,1],
-    [523,2],[494,1],[466,2],[440,1],[392,2],[349,1],[330,3],[0,2],
-    [262,1],[294,1],[349,1],[392,1],[440,1],[392,1],[349,1],[294,1],
-    [262,2],[247,1],[262,4],[0,2],
-  ];
-
-  // Tabla-style bass rhythm
-  const bass = [
-    [131,1],[0,0.5],[131,0.5],[196,1],[0,1],[131,1],[0,0.5],[131,0.5],[196,1],[0,1],
-    [131,1],[0,0.5],[131,0.5],[175,1],[0,1],[131,1],[0,0.5],[131,0.5],[175,1],[0,1],
-    [131,1],[0,0.5],[131,0.5],[196,1],[0,1],[131,1],[0,0.5],[131,0.5],[196,1],[0,1],
-    [131,1],[0,0.5],[165,0.5],[196,1],[0,1],[131,1],[0,0.5],[131,0.5],[175,1],[0,1],
-    [131,0.5],[131,0.5],[131,0.5],[131,0.5],[175,0.5],[175,0.5],[196,0.5],[196,0.5],
-    [131,2],[0,1],[131,4],[0,2],
-  ];
-
+// Legacy scheduleLoop reference (unused, kept for safety)
+function _legacyTitle() {
+  const bpm=120, b=60/bpm;
   function scheduleLoop() {
     if (!musicPlaying) return;
     const now = audioCtx.currentTime;
-    let t = now + 0.1;
-
+    let t = now + 0.1, bt = now + 0.1;
+    const melody=[], bass=[];
     melody.forEach(([freq, beats]) => {
       if (freq > 0) playNote(freq, t, b * beats * 0.85, 'square', 0.06, musicGain);
       t += b * beats;
     });
-
-    let bt = now + 0.1;
     bass.forEach(([freq, beats]) => {
       if (freq > 0) playNote(freq, bt, b * beats * 0.7, 'triangle', 0.07, musicGain);
       bt += b * beats;
