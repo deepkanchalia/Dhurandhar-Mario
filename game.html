@@ -283,6 +283,13 @@ const gameBgMusic = new Audio('assets/rasputin.mp3');
 gameBgMusic.loop = true;
 gameBgMusic.volume = 0.5;
 
+const victoryMusic = new Audio('assets/victory-rasputin.mp3');
+victoryMusic.loop = true;
+victoryMusic.volume = 0.6;
+
+function playVictoryMusic() { victoryMusic.currentTime = 0; victoryMusic.play().catch(() => {}); }
+function stopVictoryMusic() { victoryMusic.pause(); victoryMusic.currentTime = 0; }
+
 function playOverworldMusic() { gameBgMusic.play().catch(() => {}); }
 function playTitleMusic() { gameBgMusic.play().catch(() => {}); }
 
@@ -606,7 +613,7 @@ function update() {
       const newCamX = Math.floor(Math.max(0, Math.min(targetCam, LEVEL_WIDTH-CANVAS_WIDTH)));
       if (newCamX > camera.x) camera.x = newCamX;
       // Reached castle
-      if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; }
+      if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; playVictoryMusic(); }
     }
     else if (endingPhase === 1) {
       // Phase 1: Queen emerges from castle
@@ -1488,12 +1495,14 @@ canvas.addEventListener('click', (e) => {
 function getShareUrl() { return window.location.origin + window.location.pathname.replace('game.html',''); }
 
 document.getElementById('btn-share-linkedin').addEventListener('click', () => {
+  stopVictoryMusic();
   const url = getShareUrl();
   const text = "I just played Dhurandhar Mario and got pranked! 😂🎮 Try beating it yourself — bet you can't win $1000 either:";
   window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url)+'&summary='+encodeURIComponent(text), '_blank');
 });
 
 document.getElementById('btn-copy-link').addEventListener('click', () => {
+  stopVictoryMusic();
   navigator.clipboard.writeText(getShareUrl()).then(() => {
     const toast = document.getElementById('copied-toast');
     toast.classList.add('show');
@@ -1502,7 +1511,7 @@ document.getElementById('btn-copy-link').addEventListener('click', () => {
 });
 
 document.getElementById('btn-home').addEventListener('click', () => {
-  stopMusic(); window.location.href = 'index.html';
+  stopMusic(); stopVictoryMusic(); window.location.href = 'index.html';
 });
 
 // Spawn confetti when April Fool overlay shows
@@ -1534,7 +1543,7 @@ aprilObserver.observe(document.getElementById('april-overlay'), {attributes:true
 
 // Close button — go back to landing page
 document.getElementById('close-btn').addEventListener('click', () => {
-  stopMusic();
+  stopMusic(); stopVictoryMusic();
   window.location.href = 'index.html';
 });
 
