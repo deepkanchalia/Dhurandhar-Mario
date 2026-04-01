@@ -613,17 +613,20 @@ function update() {
       if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; }
     }
     else if (endingPhase === 1) {
-      // Phase 1: Queen emerges from castle
-      if (endingTimer === 1) { queenEntity.visible = true; queenEntity.x = castleX + TILE*2; }
-      if (endingTimer < 60) queenEntity.x -= 0.8;
+      // Phase 1: Queen emerges from castle — spawn far right of hero
+      if (endingTimer === 1) { queenEntity.visible = true; queenEntity.x = castleX + TILE*3; }
+      if (endingTimer < 60) queenEntity.x -= 1.2; // Walk out further
       if (endingTimer >= 60) { endingPhase = 2; endingTimer = 0; }
     }
     else if (endingPhase === 2) {
-      // Phase 2: Hero and Queen walk toward each other
-      if (endingTimer < 40) {
-        if (Math.abs(player.x - queenEntity.x) > 10) {
-          player.x += 1; player.facingRight = true;
+      // Phase 2: Hero walks to stand BESIDE queen (not overlap)
+      const targetX = queenEntity.x - player.w - 8; // Stand to her left with gap
+      if (endingTimer < 50) {
+        if (player.x < targetX) {
+          player.x += 1.5; player.facingRight = true;
           player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
+        } else {
+          player.x = targetX; player.walkFrame = 0; // Stop and stand
         }
       }
       if (endingTimer >= 50) { endingPhase = 3; endingTimer = 0; }
@@ -642,14 +645,15 @@ function update() {
       if (endingTimer >= 180) { endingPhase = 4; endingTimer = 0; }
     }
     else if (endingPhase === 4) {
-      // Phase 4: Hero comes out of castle after 3 sec
+      // Phase 4: Hero comes out of castle after pause
       if (endingTimer === 1) {
         const groundY = CANVAS_HEIGHT - TILE*2;
         player.y = groundY - player.h; player.x = castleX + TILE*2;
-        player.facingRight = false; // facing left initially
+        player.facingRight = true;
+        player.walkFrame = 0;
       }
-      // Wait 3 sec (180 frames)
-      if (endingTimer >= 180) { endingPhase = 5; endingTimer = 0; playVictoryMusic(); }
+      // Wait 2 sec (120 frames) then auto-run
+      if (endingTimer >= 120) { endingPhase = 5; endingTimer = 0; playVictoryMusic(); }
     }
     else if (endingPhase === 5) {
       // Phase 5: Hero runs right for 2 sec (opposite of flag) + Rasputin plays + fireworks
