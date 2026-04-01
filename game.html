@@ -198,6 +198,12 @@ function playSFX(type) {
   } else if (type === 'levelcomplete') {
     const notes = [523, 587, 659, 698, 784, 880, 988, 1047];
     notes.forEach((n, i) => playNote(n, now + i * 0.08, 0.12, 'square', 0.06));
+  } else if (type === 'shrink') {
+    // Descending pipe sound — power down
+    playNote(800, now, 0.06, 'square', 0.07);
+    playNote(600, now+0.06, 0.06, 'square', 0.06);
+    playNote(400, now+0.12, 0.06, 'square', 0.05);
+    playNote(300, now+0.18, 0.15, 'triangle', 0.06);
   }
 }
 
@@ -500,7 +506,8 @@ function addEnemy(type, tileX, groundY, sprite) {
 
 // ==================== PLAYER ====================
 function createPlayer(x, y) {
-  return { x:x, y:y, w:32, h:44, vx:0, vy:0, onGround:false, facingRight:true, walkFrame:0, walkTimer:0, invincible:0 };
+  return { x:x, y:y, w:32, h:44, vx:0, vy:0, onGround:false, facingRight:true, walkFrame:0, walkTimer:0, invincible:0, powerState:0 };
+  // powerState: 0=small, 1=super (1.5x + muscles), 2=fire (flames)
 }
 
 // ==================== COLLISION ====================
@@ -575,8 +582,18 @@ function updateMushrooms() {
     m.y += m.vy;
     resolveCollisionsY(m, activeSolids, false);
     if (rectCollide(player, m)) {
-      m.collected = true; score += 1000; player.invincible = 300;
+      m.collected = true; score += 1000;
       spawnMushroomParticle(m.x+m.w/2, m.y); playSFX('powerup');
+      // Power up: small→super(1.5x), super→fire
+      if (player.powerState < 2) {
+        player.powerState++;
+        if (player.powerState === 1) {
+          // Grow to 1.5x
+          player.h = 66; player.w = 48; player.y -= 22;
+        }
+        // powerState 2 = fire mode (visual only, size stays)
+      }
+      player.invincible = 60; // Brief invincibility after powerup
     }
     if (m.y > CANVAS_HEIGHT+50) m.collected = true;
   });
@@ -743,6 +760,13 @@ function update() {
       }
     } else {
       if (enemy.isShell&&!enemy.shellMoving) { enemy.shellMoving=true; enemy.vx=player.x<enemy.x?6:-6; player.invincible=10; }
+      else if (player.powerState > 0) {
+        // Powered up: shrink back to small instead of dying
+        player.powerState = 0;
+        player.w = 32; player.h = 44;
+        player.invincible = 120; // 2 sec invincibility after hit
+        playSFX('shrink');
+      }
       else playerDie();
     }
   });
@@ -778,7 +802,7 @@ function resetLevel() {
   // Full reset — enemies, blocks, items all go back to original state
   buildLevel();
   const groundY=CANVAS_HEIGHT-TILE*2;
-  player=createPlayer(3*TILE, groundY-44); camera.x=0; timer=400; timerAccum=0;
+  player=createPlayer(3*TILE, groundY-44); player.powerState=0; player.w=32; player.h=44; camera.x=0; timer=400; timerAccum=0;
 }
 
 // ==================== DRAWING ====================
@@ -797,11 +821,67 @@ function drawHero(img, x, y, w, h, facingRight, walkFrame) {
   ctx.save();
   if (!facingRight) { ctx.translate(sx+w/2,0); ctx.scale(-1,1); ctx.translate(-(sx+w/2),0); }
 
-  // Draw full-body image directly — slight bob for walk animation
-  const bobY = (walkFrame % 2 === 0 && Math.abs(player.vx) > 0.5) ? -2 : 0;
-  const drawW = w + 8;
-  const drawH = h + 6;
-  ctx.drawImage(img, sx - 4, sy + bobY - 3, drawW, drawH);
+  const bobY = (walkFrame%2===0 && Math.abs(player.vx)>0.5) ? -2 : 0;
+  const legOff = walkFrame%2===0 ? 3 : -3;
+  const isSuper = player.powerState >= 1;
+  const isFire = player.powerState >= 2;
+
+  // Legs (two legs with shoes)
+  const legW = isSuper ? 8 : 6;
+  const legH = isSuper ? 14 : 10;
+  const shoeW = isSuper ? 12 : 9;
+  const shoeH = isSuper ? 7 : 5;
+  const legY = sy + h - legH - shoeH + bobY;
+  // Left leg
+  ctx.fillStyle = '#2244AA';
+  ctx.fillRect(sx + w/2 - legW - 2 + legOff, legY, legW, legH);
+  // Right leg
+  ctx.fillRect(sx + w/2 + 2 - legOff, legY, legW, legH);
+  // Shoes
+  ctx.fillStyle = '#8B4513';
+  ctx.beginPath(); ctx.ellipse(sx+w/2-legW/2-2+legOff, legY+legH+shoeH/2, shoeW/2, shoeH/2, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+w/2+legW/2+2-legOff, legY+legH+shoeH/2, shoeW/2, shoeH/2, 0, 0, Math.PI*2); ctx.fill();
+
+  // Body image (drawn above legs)
+  const bodyH = h - legH - shoeH + 4;
+  ctx.drawImage(img, sx - 4, sy + bobY - 3, w + 8, bodyH);
+
+  // Super state: muscle arms
+  if (isSuper) {
+    ctx.fillStyle = '#D4956A';
+    // Left arm
+    const armY = sy + bodyH*0.35 + bobY;
+    ctx.beginPath();
+    ctx.ellipse(sx - 6, armY, 8, 12, -0.3, 0, Math.PI*2);
+    ctx.fill();
+    // Right arm
+    ctx.beginPath();
+    ctx.ellipse(sx + w + 14, armY, 8, 12, 0.3, 0, Math.PI*2);
+    ctx.fill();
+    // Fists
+    ctx.fillStyle = '#C4855A';
+    ctx.beginPath(); ctx.arc(sx - 8, armY + 10, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + w + 16, armY + 10, 5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Fire state: flames around body
+  if (isFire) {
+    const t = Date.now() / 100;
+    for (let i = 0; i < 6; i++) {
+      const fx = sx + w/2 + Math.sin(t + i*1.1) * (w/2 + 8);
+      const fy = sy + h*0.3 + Math.cos(t*1.3 + i*0.9) * 12 + bobY;
+      const fSize = 4 + Math.sin(t*2 + i) * 2;
+      ctx.fillStyle = i%2===0 ? 'rgba(255,100,0,0.7)' : 'rgba(255,200,0,0.6)';
+      ctx.beginPath(); ctx.arc(fx, fy, fSize, 0, Math.PI*2); ctx.fill();
+    }
+    // Aura glow
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,100,0,0.4)';
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = 'rgba(255,100,0,0.05)';
+    ctx.beginPath(); ctx.arc(sx+w/2, sy+h/2+bobY, w*0.8, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -817,21 +897,33 @@ function drawGoomba(img, x, y, w, h, facingRight, walkFrame, isSquished) {
     ctx.restore(); return;
   }
   const lo=walkFrame%2===0?2:-2;
+
+  // 4 legs (two pairs, alternating)
   ctx.fillStyle='#2B1A0E';
-  ctx.beginPath(); ctx.ellipse(sx+w/2-9+lo,sy+h-3,10,6,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(sx+w/2+9-lo,sy+h-3,10,6,0,0,Math.PI*2); ctx.fill();
+  const legY = sy+h-3;
+  // Back pair (slightly behind)
+  ctx.beginPath(); ctx.ellipse(sx+w*0.2+lo, legY, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+w*0.8-lo, legY, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+  // Front pair
+  ctx.beginPath(); ctx.ellipse(sx+w*0.35-lo, legY+1, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+w*0.65+lo, legY+1, 7, 5, 0, 0, Math.PI*2); ctx.fill();
+
+  // Mushroom body
   ctx.fillStyle='#8B5E3C';
   ctx.beginPath();
   ctx.moveTo(sx+2,sy+h-8);
   ctx.quadraticCurveTo(sx-5,sy+h*0.35,sx+w/2,sy+2);
   ctx.quadraticCurveTo(sx+w+5,sy+h*0.35,sx+w-2,sy+h-8);
   ctx.lineTo(sx+2,sy+h-8); ctx.fill();
+  // Darker bottom
   ctx.fillStyle='#6B3E1C';
   ctx.beginPath(); ctx.ellipse(sx+w/2,sy+h-8,w/2+3,7,0,0,Math.PI); ctx.fill();
-  const fs=30; drawFace(img, sx+(w-fs)/2, sy+h*0.18, fs);
+  // Face
+  const fs=26; drawFace(img, sx+(w-fs)/2, sy+h*0.18, fs);
+  // Angry eyebrows
   ctx.strokeStyle='#2B1A0E'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(sx+w/2-16,sy+h*0.18+2); ctx.lineTo(sx+w/2-5,sy+h*0.18+7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sx+w/2+16,sy+h*0.18+2); ctx.lineTo(sx+w/2+5,sy+h*0.18+7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+w/2-14,sy+h*0.18+2); ctx.lineTo(sx+w/2-5,sy+h*0.18+7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+w/2+14,sy+h*0.18+2); ctx.lineTo(sx+w/2+5,sy+h*0.18+7); ctx.stroke();
   ctx.restore();
 }
 
@@ -842,19 +934,58 @@ function drawKoopa(img, x, y, w, h, facingRight, walkFrame, isSquished) {
   if (!facingRight) { ctx.translate(sx+w/2,0); ctx.scale(-1,1); ctx.translate(-(sx+w/2),0); }
   if (isSquished) { drawKoopaShell(sx,sy+h-24,w,24,img); ctx.restore(); return; }
   const lo=walkFrame%2===0?2:-2;
+
+  // Turtle legs (short, stubby, green-yellow)
+  ctx.fillStyle='#A0C820';
+  // Back legs
+  ctx.fillRect(sx+w*0.15+lo, sy+h-12, 7, 12);
+  ctx.fillRect(sx+w*0.7-lo, sy+h-12, 7, 12);
+  // Feet
   ctx.fillStyle='#E8A020';
-  ctx.beginPath(); ctx.ellipse(sx+w/2-7+lo,sy+h-3,9,6,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(sx+w/2+7-lo,sy+h-3,9,6,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#A0C820'; ctx.fillRect(sx+w/2-11+lo,sy+h-16,9,14); ctx.fillRect(sx+w/2+2-lo,sy+h-16,9,14);
+  ctx.beginPath(); ctx.ellipse(sx+w*0.18+lo, sy+h-1, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+w*0.73-lo, sy+h-1, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+
+  // Turtle shell (main body — dome shape)
   ctx.fillStyle=C.PIPE_DARK;
-  ctx.beginPath(); ctx.ellipse(sx+w/2,sy+h*0.45,w/2+5,h*0.32,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(sx+w/2, sy+h*0.5, w/2+4, h*0.35, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Shell dome (top half darker)
+  ctx.fillStyle='#1A6A1A';
+  ctx.beginPath();
+  ctx.ellipse(sx+w/2, sy+h*0.45, w/2+2, h*0.28, 0, Math.PI, 0);
+  ctx.fill();
+  // Shell rim
   ctx.strokeStyle='#F0E060'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.ellipse(sx+w/2,sy+h*0.45,w/2+5,h*0.32,0,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(sx+w/2, sy+h*0.5, w/2+4, h*0.35, 0, 0, Math.PI*2); ctx.stroke();
+  // Shell pattern
+  ctx.strokeStyle='#0D6B0D'; ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(sx+w/2, sy+h*0.2); ctx.lineTo(sx+w/2, sy+h*0.65);
+  ctx.moveTo(sx+w*0.2, sy+h*0.45); ctx.lineTo(sx+w*0.8, sy+h*0.45);
+  ctx.stroke();
+  // Belly (underside visible from front)
   ctx.fillStyle='#F0E8C8';
-  ctx.beginPath(); ctx.ellipse(sx+w/2,sy+h*0.5,w/4,h*0.2,0,0,Math.PI*2); ctx.fill();
-  const hs=32, hx=sx+(w-hs)/2+4, hy=sy-2;
-  ctx.fillStyle='#60B830'; ctx.beginPath(); ctx.arc(hx+hs/2-2,hy+hs/2,hs/2+2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+w/2, sy+h*0.55, w/4, h*0.15, 0, 0, Math.PI*2); ctx.fill();
+
+  // Turtle tail (small triangle at back)
+  ctx.fillStyle='#A0C820';
+  ctx.beginPath();
+  ctx.moveTo(sx-2, sy+h*0.55);
+  ctx.lineTo(sx-8, sy+h*0.5);
+  ctx.lineTo(sx-2, sy+h*0.45);
+  ctx.fill();
+
+  // Head (extends from shell)
+  const hs=26, hx=sx+w-8, hy=sy+h*0.15;
+  ctx.fillStyle='#60B830';
+  ctx.beginPath(); ctx.arc(hx+hs/2, hy+hs/2, hs/2+2, 0, Math.PI*2); ctx.fill();
+  // Neck connecting head to shell
+  ctx.fillStyle='#A0C820';
+  ctx.fillRect(sx+w-4, sy+h*0.3, 10, 10);
+  // Face
   drawFace(img, hx, hy+2, hs);
+
   ctx.restore();
 }
 
