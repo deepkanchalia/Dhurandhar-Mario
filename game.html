@@ -109,6 +109,7 @@ canvas {
   <img src="assets/april-fool.jpg" alt="April Fool!">
   <h1>HAPPY APRIL FOOLS' DAY!</h1>
   <p>You really thought you won $100? 😂</p>
+  <p style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:16px;margin-top:12px;">Now make someone else a fool, share on —</p>
   <div class="april-buttons">
     <button class="april-btn btn-linkedin" id="btn-share-linkedin">Share on LinkedIn</button>
     <button class="april-btn btn-copy" id="btn-copy-link">Copy Link</button>
@@ -1213,32 +1214,9 @@ function drawHearts(cx, cy) {
 }
 
 function draw() {
-  // Sky background — Lyari Town fades to Mario sky
-  const firstEnemyX = 22 * TILE; // First enemy position
-  const fadeStart = 15 * TILE;   // Start fading before first enemy
-  const fadeEnd = 30 * TILE;     // Fully Mario sky by here
-  let lyariAlpha = 1;
-
-  if (player && gameState === 'PLAYING') {
-    if (player.x >= fadeEnd) lyariAlpha = 0;
-    else if (player.x > fadeStart) lyariAlpha = 1 - (player.x - fadeStart) / (fadeEnd - fadeStart);
-  } else if (gameState !== 'START') {
-    lyariAlpha = 0; // No Lyari bg on death/game over/level complete
-  }
-
-  // Draw Mario sky first
+  // Sky — solid NES blue
   ctx.fillStyle = C.SKY;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-  // Overlay Lyari BG on top with alpha
-  if (lyariAlpha > 0 && images['lyari-bg'] && images['lyari-bg'].complete) {
-    ctx.save();
-    ctx.globalAlpha = lyariAlpha;
-    // Draw to fill the sky area (above ground)
-    const groundY = CANVAS_HEIGHT - TILE * 2;
-    ctx.drawImage(images['lyari-bg'], 0, 0, CANVAS_WIDTH, groundY);
-    ctx.restore();
-  }
 
   drawClouds();
   drawHills();
