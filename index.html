@@ -797,38 +797,11 @@ function drawHero(img, x, y, w, h, facingRight, walkFrame) {
   ctx.save();
   if (!facingRight) { ctx.translate(sx+w/2,0); ctx.scale(-1,1); ctx.translate(-(sx+w/2),0); }
 
-  const headSize=30, headX=sx+(w-headSize)/2, headY=sy;
-  const bodyTop=sy+headSize-6, bodyW=w+2, bodyX=sx+(w-bodyW)/2;
-  const legOff=walkFrame%2===0?3:-3;
-
-  // Cap
-  ctx.fillStyle=C.MARIO_RED;
-  ctx.beginPath(); ctx.ellipse(headX+headSize/2,headY+2,headSize/2+6,11,0,Math.PI,0); ctx.fill();
-  ctx.fillStyle='#CC0000'; ctx.fillRect(headX-4,headY-1,headSize+10,6);
-  ctx.fillStyle='#FFF'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-  ctx.fillText('D',headX+headSize/2+2,headY+4);
-  drawFace(img, headX, headY+2, headSize);
-
-  // Shirt
-  ctx.fillStyle=C.MARIO_RED; ctx.fillRect(bodyX+2,bodyTop,bodyW-4,14);
-  // Arms
-  const armY=bodyTop+2;
-  ctx.fillRect(bodyX-7,armY+legOff,9,15); ctx.fillRect(bodyX+bodyW-2,armY-legOff,9,15);
-  ctx.fillStyle='#FFF';
-  ctx.beginPath(); ctx.arc(bodyX-2,armY+15+legOff,5.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(bodyX+bodyW+2,armY+15-legOff,5.5,0,Math.PI*2); ctx.fill();
-
-  // Overalls
-  ctx.fillStyle='#3030DD'; ctx.fillRect(bodyX+2,bodyTop+12,bodyW-4,18);
-  ctx.fillRect(bodyX+7,bodyTop+2,6,12); ctx.fillRect(bodyX+bodyW-13,bodyTop+2,6,12);
-  ctx.fillStyle=C.COIN_GOLD;
-  ctx.beginPath(); ctx.arc(bodyX+10,bodyTop+14,3,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(bodyX+bodyW-11,bodyTop+14,3,0,Math.PI*2); ctx.fill();
-
-  // Shoes
-  ctx.fillStyle=C.MARIO_BROWN;
-  ctx.beginPath(); ctx.ellipse(bodyX+9+legOff,bodyTop+30+4,11,7,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(bodyX+bodyW-9-legOff,bodyTop+30+4,11,7,0,0,Math.PI*2); ctx.fill();
+  // Draw full-body image directly — slight bob for walk animation
+  const bobY = (walkFrame % 2 === 0 && Math.abs(player.vx) > 0.5) ? -2 : 0;
+  const drawW = w + 8;
+  const drawH = h + 6;
+  ctx.drawImage(img, sx - 4, sy + bobY - 3, drawW, drawH);
 
   ctx.restore();
 }
@@ -1363,9 +1336,7 @@ function drawHUD() {
   ctx.textAlign='right';
   ctx.fillText('x'+lives, CANVAS_WIDTH-80, 50);
   if (images.hero.complete) {
-    ctx.fillStyle=C.MARIO_RED;
-    ctx.beginPath(); ctx.ellipse(CANVAS_WIDTH-110,44,13,6,0,Math.PI,0); ctx.fill();
-    drawFace(images.hero, CANVAS_WIDTH-122, 38, 24);
+    ctx.drawImage(images.hero, CANVAS_WIDTH-128, 30, 20, 30);
   }
 }
 
@@ -1382,12 +1353,8 @@ function drawStartScreen() {
   ctx.fillText('A Super Mario-Style Adventure',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-30);
 
   if (images.hero.complete) {
-    // Hero face with cap
-    const fx=CANVAS_WIDTH/2-35, fy=CANVAS_HEIGHT/2-10;
-    ctx.fillStyle=C.MARIO_RED;
-    ctx.beginPath(); ctx.ellipse(fx+35,fy+2,40,14,0,Math.PI,0); ctx.fill();
-    ctx.fillRect(fx-5,fy-2,80,8);
-    drawFace(images.hero, fx, fy+2, 70);
+    // Full-body hero on title screen
+    ctx.drawImage(images.hero, CANVAS_WIDTH/2-40, CANVAS_HEIGHT/2-15, 80, 100);
   }
 
   ctx.fillStyle=Math.floor(Date.now()/500)%2===0?C.TEXT_WHITE:C.COIN_GOLD;
