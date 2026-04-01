@@ -108,7 +108,7 @@ canvas {
 <div id="april-overlay">
   <img src="assets/april-fool.jpg" alt="April Fool!">
   <h1>HAPPY APRIL FOOLS' DAY!</h1>
-  <p>You really thought you won $1000? 😂</p>
+  <p>You really thought you won $100? 😂</p>
   <div class="april-buttons">
     <button class="april-btn btn-linkedin" id="btn-share-linkedin">Share on LinkedIn</button>
     <button class="april-btn btn-copy" id="btn-copy-link">Copy Link</button>
@@ -1371,7 +1371,7 @@ function draw() {
       const btnX=CANVAS_WIDTH/2-180, btnY=CANVAS_HEIGHT/2+30, btnW=360, btnH=50;
       ctx.beginPath(); ctx.roundRect(btnX,btnY,btnW,btnH,10); ctx.fill();
       ctx.fillStyle='#FFF'; ctx.font='bold 18px "Courier New", monospace';
-      ctx.fillText('Click to Claim $1000 Claude Voucher',CANVAS_WIDTH/2,btnY+32);
+      ctx.fillText('Click to Claim $100 Claude Voucher',CANVAS_WIDTH/2,btnY+32);
 
       // Store button bounds for click detection
       window._voucherBtn = {x:btnX,y:btnY,w:btnW,h:btnH};
@@ -1497,7 +1497,7 @@ function getShareUrl() { return window.location.origin + window.location.pathnam
 document.getElementById('btn-share-linkedin').addEventListener('click', () => {
   stopVictoryMusic();
   const url = getShareUrl();
-  const text = "I just played Dhurandhar Mario and got pranked! 😂🎮 Try beating it yourself — bet you can't win $1000 either:";
+  const text = "I just played Dhurandhar Mario and got pranked! 😂🎮 Try beating it yourself — bet you can't win $100 either:";
   window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url)+'&summary='+encodeURIComponent(text), '_blank');
 });
 
