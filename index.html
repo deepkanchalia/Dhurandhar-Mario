@@ -173,10 +173,19 @@ function playSFX(type) {
       playNote(400 + i * 100, now + i * 0.06, 0.08, 'square', 0.06);
     }
   } else if (type === 'die') {
-    playNote(600, now, 0.15, 'square', 0.08);
-    playNote(500, now + 0.15, 0.15, 'square', 0.07);
-    playNote(400, now + 0.3, 0.15, 'square', 0.06);
-    playNote(300, now + 0.45, 0.3, 'triangle', 0.08);
+    // Classic Mario death jingle
+    playNote(494, now, 0.12, 'square', 0.09);         // B4
+    playNote(698, now + 0.15, 0.12, 'square', 0.08);  // F5
+    playNote(698, now + 0.3, 0.06, 'square', 0.07);   // F5 (short)
+    playNote(698, now + 0.38, 0.12, 'square', 0.07);  // F5
+    playNote(659, now + 0.52, 0.12, 'square', 0.07);  // E5
+    playNote(587, now + 0.66, 0.12, 'square', 0.06);  // D5
+    playNote(523, now + 0.8, 0.12, 'square', 0.06);   // C5
+    playNote(330, now + 0.95, 0.15, 'square', 0.05);  // E4
+    playNote(262, now + 1.15, 0.4, 'triangle', 0.08); // C4 (long low end)
+    // Bass
+    playNote(196, now + 0.15, 0.5, 'triangle', 0.06);
+    playNote(131, now + 0.8, 0.6, 'triangle', 0.06);
   } else if (type === 'block') {
     playNote(600, now, 0.04, 'square', 0.05);
     playNote(800, now + 0.03, 0.06, 'square', 0.05);
@@ -195,6 +204,7 @@ function playOverworldMusic() {
   if (!audioCtx) return;
   stopMusic();
   ensureAudio();
+  musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
   musicPlaying = true;
 
   const bpm = 200;
@@ -235,16 +245,16 @@ function playOverworldMusic() {
     const now = audioCtx.currentTime;
     let t = now + 0.1;
 
-    // Melody
+    // Melody — routed through musicGain so stopMusic() can mute
     melody.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, t, beatLen * beats * 0.9, 'square', 0.05);
+      if (freq > 0) playNote(freq, t, beatLen * beats * 0.9, 'square', 0.05, musicGain);
       t += beatLen * beats;
     });
 
     // Bass
     let bt = now + 0.1;
     bass.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, bt, beatLen * beats * 0.8, 'triangle', 0.06);
+      if (freq > 0) playNote(freq, bt, beatLen * beats * 0.8, 'triangle', 0.06, musicGain);
       bt += beatLen * beats;
     });
 
@@ -258,6 +268,7 @@ function playOverworldMusic() {
 function playTitleMusic() {
   ensureAudio();
   if (!audioCtx) return;
+  musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
   musicPlaying = true;
 
   const bpm = 120;
@@ -289,13 +300,13 @@ function playTitleMusic() {
     let t = now + 0.1;
 
     melody.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, t, b * beats * 0.85, 'square', 0.06);
+      if (freq > 0) playNote(freq, t, b * beats * 0.85, 'square', 0.06, musicGain);
       t += b * beats;
     });
 
     let bt = now + 0.1;
     bass.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, bt, b * beats * 0.7, 'triangle', 0.07);
+      if (freq > 0) playNote(freq, bt, b * beats * 0.7, 'triangle', 0.07, musicGain);
       bt += b * beats;
     });
 
@@ -305,20 +316,20 @@ function playTitleMusic() {
   scheduleLoop();
 }
 
+let musicGain = null;
+
 function stopMusic() {
   musicPlaying = false;
   if (currentMusic) { clearTimeout(currentMusic); currentMusic = null; }
-  // Close and recreate audio context to kill all lingering oscillators
-  if (audioCtx && audioCtx.state !== 'closed') {
-    audioCtx.close().then(() => { audioCtx = null; }).catch(() => { audioCtx = null; });
-  } else {
-    audioCtx = null;
-  }
+  // Mute music channel immediately (oscillators will self-stop when their duration ends)
+  if (musicGain) { musicGain.gain.setValueAtTime(0, audioCtx ? audioCtx.currentTime : 0); }
 }
 
 function ensureAudio() {
   if (!audioCtx || audioCtx.state === 'closed') {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain();
+    musicGain.connect(audioCtx.destination);
   }
 }
 
@@ -706,7 +717,7 @@ function update() {
 }
 
 function playerDie() {
-  lives--; gameState='DEATH'; deathTimer=60; player.vy=JUMP_FORCE; player.vx=0; stopMusic(); playSFX('die');
+  lives--; gameState='DEATH'; deathTimer=120; player.vy=JUMP_FORCE; player.vx=0; stopMusic(); playSFX('die');
 }
 function startGame() {
   gameState='PLAYING'; timer=400; timerAccum=0; buildLevel(); resetLevel();
@@ -1237,6 +1248,7 @@ function init() { gameLoop(); }
 // Close button — stops all audio and closes
 document.getElementById('close-btn').addEventListener('click', () => {
   stopMusic();
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
   window.close();
   setTimeout(() => {
     document.body.innerHTML = '<div style="color:#F8F8F8;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;font-size:24px;">Game closed. You can close this tab.</div>';
