@@ -325,14 +325,22 @@ function ensureAudio() {
 // ==================== INPUT ====================
 const keys = {};
 const keysJustPressed = {};
+function onFirstInteraction() {
+  initAudio();
+  if (audioCtx && !titleMusicStarted && gameState === 'START') {
+    playTitleMusic();
+    titleMusicStarted = true;
+  }
+}
 window.addEventListener('keydown', e => {
   if (!keys[e.code]) keysJustPressed[e.code] = true;
   keys[e.code] = true;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-  // Init audio on first interaction
-  initAudio();
+  onFirstInteraction();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('click', onFirstInteraction, { once: false });
+window.addEventListener('touchstart', onFirstInteraction, { once: false });
 
 // ==================== GAME STATE ====================
 let gameState = 'START';
@@ -558,9 +566,11 @@ function updateMushrooms() {
 // ==================== UPDATE ====================
 function update() {
   if (gameState === 'START') {
-    if (!titleMusicStarted && audioCtx) { playTitleMusic(); titleMusicStarted = true; }
+    // Title music is started by onFirstInteraction() on first keypress/click
     if (keysJustPressed['Space']) {
-      stopMusic(); startGame(); playOverworldMusic();
+      stopMusic();
+      startGame();
+      playOverworldMusic(); // Overworld theme starts immediately with gameplay
       Object.keys(keysJustPressed).forEach(k => keysJustPressed[k] = false);
     }
     keysJustPressed['Space'] = false;
