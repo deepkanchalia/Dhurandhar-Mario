@@ -752,15 +752,38 @@ function stopLandingMusic() {
   if (landingAudioCtx) { landingAudioCtx.close().catch(()=>{}); landingAudioCtx = null; }
 }
 
-// Start music on first interaction
+// Start music — try autoplay on page load, fallback to first interaction
 let landingMusicStarted = false;
 function initLandingMusic() {
   if (landingMusicStarted) return;
   landingMusicStarted = true;
   playLandingMusic();
 }
+
+// Attempt autoplay immediately on load
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const testCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (testCtx.state === 'running') {
+      // Browser allows autoplay — start immediately
+      testCtx.close();
+      initLandingMusic();
+    } else {
+      // Browser blocked autoplay — try to resume on state change
+      testCtx.resume().then(() => {
+        testCtx.close();
+        initLandingMusic();
+      }).catch(() => { testCtx.close(); });
+    }
+  } catch(e) {}
+});
+
+// Fallback: start on any user interaction if autoplay was blocked
 document.addEventListener('click', initLandingMusic, { once: true });
 document.addEventListener('keydown', initLandingMusic, { once: true });
+document.addEventListener('touchstart', initLandingMusic, { once: true });
+document.addEventListener('scroll', initLandingMusic, { once: true });
+document.addEventListener('mousemove', initLandingMusic, { once: true });
 
 // Screen management
 function showScreen(id) {
