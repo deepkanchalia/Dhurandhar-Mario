@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dhurandhar: The Game</title>
+<meta name="description" content="Play Dhurandhar — a Super Mario-style platformer with a Bollywood twist. Can you reach the castle?">
+<meta property="og:title" content="Dhurandhar: The Game">
+<meta property="og:description" content="A Super Mario-style platformer with a Bollywood twist. Play now!">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --sky: #5C94FC;
+  --ground: #AC7C00;
+  --ground-top: #E45C10;
+  --pipe-green: #00A800;
+  --pipe-dark: #007800;
+  --pipe-light: #B8F8B8;
+  --brick: #C84C09;
+  --question: #F8B800;
+  --mario-red: #F83800;
+  --text-white: #F8F8F8;
+  --coin-gold: #F8B800;
+}
+
+body {
+  font-family: 'Press Start 2P', monospace;
+  background: #000;
+  color: var(--text-white);
+  overflow-x: hidden;
+}
+
+/* ==================== SCREEN 1: HERO ==================== */
+.screen {
+  display: none;
+  width: 100vw;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.screen.active { display: flex; }
+
+#screen-hero {
+  background: linear-gradient(180deg, var(--sky) 0%, var(--sky) 70%, transparent 70%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Parallax hills */
+.hills {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  z-index: 1;
+}
+.hill {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50% 50% 0 0;
+  background: var(--pipe-green);
+}
+.hill-1 { width: 200px; height: 100px; left: 5%; }
+.hill-2 { width: 140px; height: 70px; left: 30%; }
+.hill-3 { width: 240px; height: 110px; left: 55%; }
+.hill-4 { width: 160px; height: 80px; left: 82%; }
+
+/* Clouds */
+.clouds {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  z-index: 1;
+}
+.cloud {
+  position: absolute;
+  background: var(--text-white);
+  border-radius: 50%;
+  opacity: 0.9;
+}
+.cloud::before, .cloud::after {
+  content: '';
+  position: absolute;
+  background: var(--text-white);
+  border-radius: 50%;
+}
+.cloud-1 { width: 80px; height: 40px; top: 20px; left: 10%; }
+.cloud-1::before { width: 50px; height: 30px; top: -15px; left: 15px; }
+.cloud-1::after { width: 40px; height: 25px; top: -8px; left: 45px; }
+.cloud-2 { width: 60px; height: 30px; top: 50px; left: 45%; }
+.cloud-2::before { width: 40px; height: 25px; top: -12px; left: 10px; }
+.cloud-3 { width: 90px; height: 40px; top: 10px; left: 75%; }
+.cloud-3::before { width: 55px; height: 32px; top: -16px; left: 18px; }
+.cloud-3::after { width: 45px; height: 28px; top: -10px; left: 50px; }
+
+/* Ground */
+.ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 2;
+}
+.ground-top {
+  height: 6px;
+  background: var(--ground-top);
+}
+.ground-body {
+  height: 74px;
+  background: var(--ground);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 38px,
+    rgba(80,48,0,0.3) 38px,
+    rgba(80,48,0,0.3) 40px
+  ),
+  repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 18px,
+    rgba(80,48,0,0.3) 18px,
+    rgba(80,48,0,0.3) 20px
+  );
+}
+
+/* Pipes (decorative) */
+.pipe {
+  position: absolute;
+  z-index: 3;
+}
+.pipe-top {
+  width: 60px;
+  height: 30px;
+  background: var(--pipe-green);
+  border: 2px solid var(--pipe-dark);
+  border-radius: 4px 4px 0 0;
+}
+.pipe-top::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background: var(--pipe-light);
+  border-radius: 2px;
+}
+.pipe-body {
+  width: 48px;
+  height: 50px;
+  margin: 0 auto;
+  background: var(--pipe-green);
+  border-left: 2px solid var(--pipe-dark);
+  border-right: 2px solid var(--pipe-dark);
+}
+.pipe-body::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 30px;
+  width: 6px;
+  height: 50px;
+  background: var(--pipe-light);
+}
+.pipe-left { bottom: 80px; left: 8%; }
+.pipe-right { bottom: 80px; right: 8%; }
+
+/* Hero content */
+.hero-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 20px;
+}
+
+.game-title {
+  font-size: clamp(28px, 6vw, 64px);
+  color: var(--coin-gold);
+  text-shadow: 4px 4px 0 #503000, -1px -1px 0 #F8D878;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  animation: titlePulse 2s ease-in-out infinite;
+}
+@keyframes titlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.game-subtitle {
+  font-size: clamp(10px, 2vw, 16px);
+  color: var(--text-white);
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+}
+
+.hero-image {
+  width: clamp(100px, 20vw, 180px);
+  margin: 10px auto 30px;
+  animation: heroFloat 3s ease-in-out infinite;
+  filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.4));
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+.start-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(12px, 2.5vw, 20px);
+  padding: 16px 40px;
+  background: var(--mario-red);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  box-shadow: 0 6px 0 #A02000, 0 8px 20px rgba(0,0,0,0.3);
+  transition: all 0.1s;
+  animation: btnPulse 1.5s ease-in-out infinite;
+}
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 #A02000, 0 10px 25px rgba(0,0,0,0.4);
+}
+.start-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #A02000;
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 6px 0 #A02000, 0 8px 20px rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 6px 0 #A02000, 0 8px 30px rgba(248,56,0,0.4); }
+}
+
+.credits {
+  margin-top: 30px;
+  font-size: 8px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+}
+
+/* ==================== SCREEN 2: EMAIL ==================== */
+#screen-auth {
+  background: #000;
+}
+
+.auth-box {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 460px;
+  width: 90%;
+  text-align: center;
+}
+
+.auth-title {
+  font-size: clamp(14px, 3vw, 20px);
+  color: var(--coin-gold);
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 30px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+.input-group input {
+  width: 100%;
+  padding: 14px 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: var(--text-white);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-group input:focus {
+  border-color: var(--coin-gold);
+}
+.input-group input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.continue-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  padding: 14px 32px;
+  background: var(--pipe-green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  box-shadow: 0 4px 0 var(--pipe-dark);
+  transition: all 0.1s;
+}
+.continue-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 var(--pipe-dark);
+}
+.continue-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--pipe-dark);
+}
+
+.skip-link {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 8px;
+  color: rgba(255,255,255,0.4);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.skip-link:hover { color: rgba(255,255,255,0.7); }
+
+.error-msg {
+  color: var(--mario-red);
+  font-size: 8px;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+/* ==================== SCREEN 3: PLAYER SELECT ==================== */
+#screen-select {
+  background: #000;
+}
+
+.select-title {
+  font-size: clamp(16px, 3vw, 24px);
+  color: var(--coin-gold);
+  margin-bottom: 40px;
+  text-shadow: 2px 2px 0 #503000;
+}
+
+.player-cards {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.player-card {
+  width: 200px;
+  padding: 24px;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.03);
+}
+.player-card:hover {
+  border-color: var(--coin-gold);
+  background: rgba(248,184,0,0.08);
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(248,184,0,0.15);
+}
+
+.player-card img {
+  width: 80px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 16px;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+}
+
+.player-label {
+  font-size: 10px;
+  color: var(--text-white);
+  margin-bottom: 6px;
+}
+
+.player-name {
+  font-size: 12px;
+  color: var(--coin-gold);
+}
+
+.player-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Question blocks (decorative, floating) */
+.q-block {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  background: var(--question);
+  border: 2px solid #AC7C00;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #AC7C00;
+  z-index: 1;
+  animation: blockBob 2s ease-in-out infinite;
+}
+@keyframes blockBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.q-block-1 { top: 35%; left: 6%; animation-delay: 0s; }
+.q-block-2 { top: 25%; right: 8%; animation-delay: 0.6s; }
+.q-block-3 { top: 55%; left: 12%; animation-delay: 1.2s; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .auth-box { padding: 24px 20px; }
+  .player-cards { gap: 20px; }
+  .player-card { width: 150px; padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== SCREEN 1: HERO ==================== -->
+<div id="screen-hero" class="screen active">
+  <div class="clouds">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+  </div>
+
+  <div class="q-block q-block-1">?</div>
+  <div class="q-block q-block-2">?</div>
+  <div class="q-block q-block-3">?</div>
+
+  <div class="hills">
+    <div class="hill hill-1"></div>
+    <div class="hill hill-2"></div>
+    <div class="hill hill-3"></div>
+    <div class="hill hill-4"></div>
+  </div>
+
+  <div class="pipe pipe-left">
+    <div class="pipe-top"></div>
+    <div class="pipe-body"></div>
+  </div>
+  <div class="pipe pipe-right">
+    <div class="pipe-top"></div>
+    <div class="pipe-body"></div>
+  </div>
+
+  <div class="ground">
+    <div class="ground-top"></div>
+    <div class="ground-body"></div>
+  </div>
+
+  <div class="hero-content">
+    <h1 class="game-title">DHURANDHAR</h1>
+    <p class="game-subtitle">THE GAME</p>
+    <img src="assets/hero.png" alt="Dhurandhar" class="hero-image">
+    <br>
+    <button class="start-btn" onclick="showScreen('screen-auth')">START THE GAME</button>
+    <p class="credits">A SUPER MARIO-STYLE ADVENTURE</p>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 2: EMAIL ==================== -->
+<div id="screen-auth" class="screen">
+  <div class="auth-box">
+    <h2 class="auth-title">ENTER YOUR NAME, WARRIOR</h2>
+    <p class="auth-subtitle">To save your score and claim rewards</p>
+    <form id="auth-form" onsubmit="handleAuth(event)">
+      <div class="input-group">
+        <input type="text" id="player-name" placeholder="YOUR NAME" required autocomplete="name">
+      </div>
+      <div class="input-group">
+        <input type="email" id="player-email" placeholder="YOUR EMAIL" required autocomplete="email">
+      </div>
+      <div class="error-msg" id="auth-error"></div>
+      <button type="submit" class="continue-btn">CONTINUE</button>
+    </form>
+    <a class="skip-link" onclick="skipAuth()">SKIP FOR NOW</a>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 3: PLAYER SELECT ==================== -->
+<div id="screen-select" class="screen">
+  <h2 class="select-title">SELECT PLAYER</h2>
+  <div class="player-cards">
+    <div class="player-card" onclick="selectPlayer(1)">
+      <img src="assets/hero.png" alt="Dhurandhar">
+      <div class="player-label">1 PLAYER GAME</div>
+      <div class="player-name">DHURANDHAR</div>
+    </div>
+    <div class="player-card disabled">
+      <img src="assets/hero.png" alt="Player 2" style="opacity:0.3">
+      <div class="player-label">2 PLAYER GAME</div>
+      <div class="player-name" style="color:#666">COMING SOON</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Screen management
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Auth handling
+function handleAuth(e) {
+  e.preventDefault();
+  const name = document.getElementById('player-name').value.trim();
+  const email = document.getElementById('player-email').value.trim();
+  const errEl = document.getElementById('auth-error');
+
+  if (!name) { errEl.textContent = 'ENTER YOUR NAME'; return; }
+  if (!email || !email.includes('@')) { errEl.textContent = 'ENTER A VALID EMAIL'; return; }
+
+  // Save player info
+  const playerData = { name, email, timestamp: new Date().toISOString() };
+  sessionStorage.setItem('dhurandhar_player', JSON.stringify(playerData));
+
+  // Also save to localStorage for persistence
+  const players = JSON.parse(localStorage.getItem('dhurandhar_players') || '[]');
+  players.push(playerData);
+  localStorage.setItem('dhurandhar_players', JSON.stringify(players));
+
+  showScreen('screen-select');
+}
+
+function skipAuth() {
+  sessionStorage.setItem('dhurandhar_player', JSON.stringify({ name: 'WARRIOR', email: '', skipped: true }));
+  showScreen('screen-select');
+}
+
+function selectPlayer(num) {
+  const data = JSON.parse(sessionStorage.getItem('dhurandhar_player') || '{}');
+  data.player = num;
+  sessionStorage.setItem('dhurandhar_player', JSON.stringify(data));
+  window.location.href = 'game.html?player=' + num;
+}
+</script>
+
+</body>
+</html>
