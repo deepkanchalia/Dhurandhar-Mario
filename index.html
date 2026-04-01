@@ -670,7 +670,11 @@ let landingMusicTimer = null;
 
 function playLandingMusic() {
   if (landingMusicPlaying) return;
-  landingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    landingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Force resume in case browser suspended it
+    if (landingAudioCtx.state === 'suspended') landingAudioCtx.resume();
+  } catch(e) { return; }
   landingMusicPlaying = true;
 
   const bpm = 132;
@@ -776,42 +780,19 @@ function stopLandingMusic() {
   if (landingAudioCtx) { landingAudioCtx.close().catch(()=>{}); landingAudioCtx = null; }
 }
 
-// Start music — try autoplay on page load, fallback to first interaction
+// Start music on ANY user gesture
 let landingMusicStarted = false;
 function initLandingMusic() {
   if (landingMusicStarted) return;
   landingMusicStarted = true;
-  playLandingMusic();
+  try { playLandingMusic(); } catch(e) { console.log('Music error:', e); }
 }
 
-// Attempt autoplay immediately on load
-window.addEventListener('DOMContentLoaded', () => {
-  try {
-    const testCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (testCtx.state === 'running') {
-      // Browser allows autoplay — start immediately
-      testCtx.close();
-      initLandingMusic();
-    } else {
-      // Browser blocked autoplay — try to resume on state change
-      testCtx.resume().then(() => {
-        testCtx.close();
-        initLandingMusic();
-      }).catch(() => { testCtx.close(); });
-    }
-  } catch(e) {}
+// Attach to every possible user gesture
+['click','keydown','touchstart','scroll','mousemove','mouseenter',
+ 'pointerdown','pointermove','mousedown','touchend'].forEach(evt => {
+  document.addEventListener(evt, initLandingMusic, { once: true });
 });
-
-// Fallback: start on ANY interaction — even just entering the page with cursor
-document.addEventListener('click', initLandingMusic, { once: true });
-document.addEventListener('keydown', initLandingMusic, { once: true });
-document.addEventListener('touchstart', initLandingMusic, { once: true });
-document.addEventListener('scroll', initLandingMusic, { once: true });
-document.addEventListener('mousemove', initLandingMusic, { once: true });
-document.addEventListener('mouseenter', initLandingMusic, { once: true });
-document.addEventListener('pointerdown', initLandingMusic, { once: true });
-document.addEventListener('pointermove', initLandingMusic, { once: true });
-// Also try on focus (tab switch back)
 window.addEventListener('focus', initLandingMusic, { once: true });
 
 // Screen management
