@@ -663,137 +663,23 @@ body {
   setInterval(updateTimer, 1000);
 })();
 
-// ==================== LANDING PAGE MUSIC ====================
-let landingAudioCtx = null;
-let landingMusicPlaying = false;
-let landingMusicTimer = null;
+// ==================== MUSIC — Rasputin MP3 ====================
+const bgMusic = new Audio('assets/rasputin.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.5;
 
-function playLandingMusic() {
-  if (landingMusicPlaying) return;
-  try {
-    landingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Force resume in case browser suspended it
-    if (landingAudioCtx.state === 'suspended') landingAudioCtx.resume();
-  } catch(e) { return; }
-  landingMusicPlaying = true;
+function stopLandingMusic() { bgMusic.pause(); bgMusic.currentTime = 0; }
 
-  const bpm = 132;
-  const b = 60 / bpm;
-
-  // Rasputin (Boney M) — accurate chorus melody in Bm
-  // B3=247, C#4=277, D4=294, E4=330, F#4=370, G4=392, A4=440, B4=494
-  const melody = [
-    // Verse intro riff (instrumental hook)
-    [370,0.5],[370,0.5],[330,0.5],[294,0.5],[247,1],[294,0.5],[330,0.5],[370,1],[0,0.5],
-    [370,0.5],[370,0.5],[330,0.5],[294,0.5],[247,1],[247,1],[0,1],
-
-    // "Ra Ra Rasputin" (B3 B3 B3 B3-C#4 D4)
-    [247,0.5],[247,0.5],[247,0.5],[247,0.25],[277,0.25],[294,1],[0,0.5],
-    // "Lover of the Russian queen" (D4 D4 C#4 B3 A3 B3)
-    [294,0.5],[294,0.5],[277,0.5],[247,0.5],[220,0.5],[247,1],[0,0.5],
-    // "There was a cat that really was gone"
-    [294,0.5],[294,0.5],[330,0.5],[370,0.5],[330,0.5],[294,0.5],[277,0.5],[247,1],[0,0.5],
-
-    // "Ra Ra Rasputin" repeat
-    [247,0.5],[247,0.5],[247,0.5],[247,0.25],[277,0.25],[294,1],[0,0.5],
-    // "Russia's greatest love machine"
-    [294,0.5],[294,0.5],[277,0.5],[247,0.5],[220,0.5],[247,1],[0,0.5],
-    // "It was a shame how he carried on"
-    [294,0.5],[294,0.5],[330,0.5],[370,0.5],[330,0.5],[294,0.5],[277,0.5],[247,1],[0,1],
-
-    // Instrumental break (higher octave hook)
-    [494,0.5],[494,0.5],[440,0.5],[370,0.5],[494,1],[440,0.5],[370,0.5],[330,1],[0,0.5],
-    [370,0.5],[330,0.5],[294,0.5],[247,1],[294,0.5],[330,0.5],[370,1],[0,1],
-  ];
-
-  // Disco bass — pumping Bm octave bass with Em and F#
-  const bass = [
-    // 8 bars of pumping bass
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[123,0.5],[247,0.5],
-  ];
-
-  function pNote(freq, start, dur, type, vol) {
-    if (!landingAudioCtx) return;
-    const osc = landingAudioCtx.createOscillator();
-    const gain = landingAudioCtx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(vol, start);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-    osc.connect(gain);
-    gain.connect(landingAudioCtx.destination);
-    osc.start(start);
-    osc.stop(start + dur);
-  }
-
-  function scheduleLoop() {
-    if (!landingMusicPlaying) return;
-    const now = landingAudioCtx.currentTime;
-    let t = now + 0.1;
-
-    // Melody — square wave (catchy chiptune lead)
-    melody.forEach(([freq, beats]) => {
-      if (freq > 0) pNote(freq, t, b * beats * 0.85, 'square', 0.05);
-      t += b * beats;
-    });
-
-    // Bass — triangle wave (pumping disco bass)
-    let bt = now + 0.1;
-    bass.forEach(([freq, beats]) => {
-      if (freq > 0) pNote(freq, bt, b * beats * 0.7, 'triangle', 0.07);
-      bt += b * beats;
-    });
-
-    // Disco hi-hat (noise channel, steady 8th notes)
-    let ht = now + 0.1;
-    const totalBeats = melody.reduce((s,[,beats]) => s+beats, 0);
-    for (let i = 0; i < totalBeats * 2; i++) {
-      pNote(8000 + Math.random()*2000, ht, 0.03, 'square', 0.015);
-      ht += b * 0.5;
-    }
-
-    // Kick on beats 1 and 3
-    let kt = now + 0.1;
-    for (let i = 0; i < totalBeats / 2; i++) {
-      pNote(55, kt, 0.1, 'triangle', 0.08);
-      kt += b * 2;
-    }
-
-    const loopLen = t - now;
-    landingMusicTimer = setTimeout(() => scheduleLoop(), (loopLen - 0.5) * 1000);
-  }
-  scheduleLoop();
+// Play on first user gesture
+let musicStarted = false;
+function startMusic() {
+  if (musicStarted) return;
+  musicStarted = true;
+  bgMusic.play().catch(() => {});
 }
-
-function stopLandingMusic() {
-  landingMusicPlaying = false;
-  if (landingMusicTimer) { clearTimeout(landingMusicTimer); landingMusicTimer = null; }
-  if (landingAudioCtx) { landingAudioCtx.close().catch(()=>{}); landingAudioCtx = null; }
-}
-
-// Start music on ANY user gesture
-let landingMusicStarted = false;
-function initLandingMusic() {
-  if (landingMusicStarted) return;
-  landingMusicStarted = true;
-  try { playLandingMusic(); } catch(e) { console.log('Music error:', e); }
-}
-
-// Attach to every possible user gesture
-['click','keydown','touchstart','scroll','mousemove','mouseenter',
- 'pointerdown','pointermove','mousedown','touchend'].forEach(evt => {
-  document.addEventListener(evt, initLandingMusic, { once: true });
+['click','keydown','touchstart','mousemove','mouseenter','pointerdown','scroll'].forEach(e => {
+  document.addEventListener(e, startMusic, { once: true });
 });
-window.addEventListener('focus', initLandingMusic, { once: true });
 
 // Screen management
 function showScreen(id) {

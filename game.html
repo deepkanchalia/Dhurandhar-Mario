@@ -278,86 +278,18 @@ function playSFX(type) {
 }
 
 // Mario Overworld Theme (chiptune approximation)
-function playRasputin() {
-  ensureAudio();
-  if (!audioCtx) return;
-  stopMusic();
-  ensureAudio();
-  if (musicGain) musicGain.gain.setValueAtTime(1, audioCtx.currentTime);
-  musicPlaying = true;
+// ==================== MUSIC — Rasputin MP3 ====================
+const gameBgMusic = new Audio('assets/rasputin.mp3');
+gameBgMusic.loop = true;
+gameBgMusic.volume = 0.5;
 
-  const bpm = 132;
-  const b = 60 / bpm;
-
-  const melody = [
-    [370,0.5],[370,0.5],[330,0.5],[294,0.5],[247,1],[294,0.5],[330,0.5],[370,1],[0,0.5],
-    [370,0.5],[370,0.5],[330,0.5],[294,0.5],[247,1],[247,1],[0,1],
-    [247,0.5],[247,0.5],[247,0.5],[247,0.25],[277,0.25],[294,1],[0,0.5],
-    [294,0.5],[294,0.5],[277,0.5],[247,0.5],[220,0.5],[247,1],[0,0.5],
-    [294,0.5],[294,0.5],[330,0.5],[370,0.5],[330,0.5],[294,0.5],[277,0.5],[247,1],[0,0.5],
-    [247,0.5],[247,0.5],[247,0.5],[247,0.25],[277,0.25],[294,1],[0,0.5],
-    [294,0.5],[294,0.5],[277,0.5],[247,0.5],[220,0.5],[247,1],[0,0.5],
-    [294,0.5],[294,0.5],[330,0.5],[370,0.5],[330,0.5],[294,0.5],[277,0.5],[247,1],[0,1],
-    [494,0.5],[494,0.5],[440,0.5],[370,0.5],[494,1],[440,0.5],[370,0.5],[330,1],[0,0.5],
-    [370,0.5],[330,0.5],[294,0.5],[247,1],[294,0.5],[330,0.5],[370,1],[0,1],
-  ];
-
-  const bass = [
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],
-    [123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],[123,0.5],[247,0.5],
-    [165,0.5],[330,0.5],[165,0.5],[330,0.5],[185,0.5],[370,0.5],[123,0.5],[247,0.5],
-  ];
-
-  function scheduleLoop() {
-    if (!musicPlaying) return;
-    const now = audioCtx.currentTime;
-    let t = now + 0.1;
-
-    melody.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, t, b*beats*0.85, 'square', 0.05, musicGain);
-      t += b * beats;
-    });
-
-    let bt = now + 0.1;
-    bass.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, bt, b*beats*0.7, 'triangle', 0.06, musicGain);
-      bt += b * beats;
-    });
-
-    // Hi-hat
-    let ht = now + 0.1;
-    const totalBeats = melody.reduce((s,[,beats]) => s+beats, 0);
-    for (let i = 0; i < totalBeats*2; i++) {
-      playNote(8000+Math.random()*2000, ht, 0.03, 'square', 0.012, musicGain);
-      ht += b * 0.5;
-    }
-    // Kick
-    let kt = now + 0.1;
-    for (let i = 0; i < totalBeats/2; i++) {
-      playNote(55, kt, 0.1, 'triangle', 0.07, musicGain);
-      kt += b * 2;
-    }
-
-    const loopLen = t - now;
-    currentMusic = setTimeout(() => scheduleLoop(), (loopLen - 0.5) * 1000);
-  }
-  scheduleLoop();
-}
-
-function playOverworldMusic() { playRasputin(); }
-
-function playTitleMusic() { playRasputin(); }
+function playOverworldMusic() { gameBgMusic.play().catch(() => {}); }
+function playTitleMusic() { gameBgMusic.play().catch(() => {}); }
 
 let musicGain = null;
 
 function stopMusic() {
+  gameBgMusic.pause();
   musicPlaying = false;
   if (currentMusic) { clearTimeout(currentMusic); currentMusic = null; }
   // Mute music channel immediately (oscillators will self-stop when their duration ends)
