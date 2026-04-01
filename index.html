@@ -664,21 +664,43 @@ body {
 })();
 
 // ==================== MUSIC — Rasputin MP3 ====================
-const bgMusic = new Audio('assets/rasputin.mp3');
+const bgMusic = document.createElement('audio');
+bgMusic.src = 'assets/rasputin.mp3';
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
+bgMusic.preload = 'auto';
+document.body.appendChild(bgMusic);
 
 function stopLandingMusic() { bgMusic.pause(); bgMusic.currentTime = 0; }
 
-// Play on first user gesture
+// Play on first user gesture — try multiple approaches
 let musicStarted = false;
 function startMusic() {
   if (musicStarted) return;
   musicStarted = true;
-  bgMusic.play().catch(() => {});
+  // Method 1: direct play
+  const p = bgMusic.play();
+  if (p && p.catch) {
+    p.catch(function(err) {
+      // Method 2: retry on next click if first attempt fails
+      musicStarted = false;
+      document.addEventListener('click', function retry() {
+        bgMusic.play().catch(function(){});
+        musicStarted = true;
+        document.removeEventListener('click', retry);
+      });
+    });
+  }
 }
-['click','keydown','touchstart','mousemove','mouseenter','pointerdown','scroll'].forEach(e => {
+
+// Attach to user gestures
+['click','keydown','touchstart','mousedown','pointerdown'].forEach(function(e) {
   document.addEventListener(e, startMusic, { once: true });
+});
+// Also try on START button specifically
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.querySelector('.start-btn');
+  if (btn) btn.addEventListener('click', function() { if (!musicStarted) startMusic(); });
 });
 
 // Screen management
