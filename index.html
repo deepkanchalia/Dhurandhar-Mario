@@ -105,7 +105,7 @@ body {
 @keyframes cloudDrift { 0%{transform:translateX(0)} 50%{transform:translateX(30px)} 100%{transform:translateX(0)} }
 
 /* Hills */
-.hills { position:absolute; bottom:80px; left:0; width:100%; height:120px; z-index:1; }
+.hills { position:absolute; bottom:60px; left:0; width:100%; height:120px; z-index:1; }
 .hill { position:absolute; bottom:0; border-radius:50% 50% 0 0; }
 .hill-1 { width:220px; height:110px; left:3%; background:rgba(0,168,0,0.5); }
 .hill-2 { width:150px; height:75px; left:28%; background:rgba(0,168,0,0.4); }
@@ -113,9 +113,9 @@ body {
 .hill-4 { width:170px; height:85px; left:80%; background:rgba(0,168,0,0.4); }
 
 /* Ground */
-.ground { position:absolute; bottom:0; left:0; width:100%; height:80px; z-index:2; }
-.ground-top { height:6px; background:var(--ground-top); }
-.ground-body { height:74px; background:var(--ground);
+.ground { position:absolute; bottom:0; left:0; width:100%; height:60px; z-index:2; }
+.ground-top { height:4px; background:var(--ground-top); }
+.ground-body { height:56px; background:var(--ground);
   background-image: repeating-linear-gradient(90deg,transparent,transparent 38px,rgba(80,48,0,0.3) 38px,rgba(80,48,0,0.3) 40px),
   repeating-linear-gradient(0deg,transparent,transparent 18px,rgba(80,48,0,0.3) 18px,rgba(80,48,0,0.3) 20px); }
 
@@ -124,8 +124,8 @@ body {
 .pipe-top { width:60px; height:30px; background:var(--pipe-green); border:2px solid var(--pipe-dark); border-radius:4px 4px 0 0; }
 .pipe-top::before { content:''; position:absolute; left:3px; top:0; width:8px; height:100%; background:var(--pipe-light); border-radius:2px; }
 .pipe-body { width:48px; height:50px; margin:0 auto; background:var(--pipe-green); border-left:2px solid var(--pipe-dark); border-right:2px solid var(--pipe-dark); }
-.pipe-left { bottom:80px; left:6%; }
-.pipe-right { bottom:80px; right:6%; }
+.pipe-left { bottom:60px; left:6%; }
+.pipe-right { bottom:60px; right:6%; }
 
 /* Floating ? blocks */
 .q-block { position:absolute; width:38px; height:38px; background:var(--question); border:2px solid #AC7C00; border-radius:4px;
@@ -143,7 +143,7 @@ body {
 .coin-3 { top:45%; right:12%; animation-delay:0.8s; }
 
 /* ==================== HERO CONTENT ==================== */
-.hero-content { position:relative; z-index:10; text-align:center; padding:80px 20px 20px; }
+.hero-content { position:relative; z-index:10; text-align:center; padding:80px 20px 90px; }
 
 .game-title {
   font-size: clamp(32px, 7vw, 72px);
@@ -248,13 +248,13 @@ body {
   font-family: 'Press Start 2P', monospace;
   font-size: clamp(14px, 2.5vw, 22px);
   padding: 18px 48px;
-  background: var(--mario-red);
+  background: var(--pipe-green);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
-  box-shadow: 0 6px 0 #A02000, 0 8px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 0 var(--pipe-dark), 0 8px 20px rgba(0,0,0,0.3);
   transition: all 0.1s;
   margin-top: 20px;
   position: relative;
@@ -269,8 +269,8 @@ body {
   animation: btnShine 3s ease-in-out infinite;
 }
 @keyframes btnShine { 0%{transform:translateX(-100%)} 50%{transform:translateX(100%)} 100%{transform:translateX(100%)} }
-.start-btn:hover { transform:translateY(-2px); box-shadow:0 8px 0 #A02000, 0 12px 30px rgba(248,56,0,0.3); }
-.start-btn:active { transform:translateY(4px); box-shadow:0 2px 0 #A02000; }
+.start-btn:hover { transform:translateY(-2px); box-shadow:0 8px 0 var(--pipe-dark), 0 12px 30px rgba(0,168,0,0.3); }
+.start-btn:active { transform:translateY(4px); box-shadow:0 2px 0 var(--pipe-dark); }
 
 /* Stats bar */
 .stats-bar {
@@ -380,10 +380,10 @@ body {
 /* Enemy silhouettes walking across ground */
 .enemies-layer {
   position: absolute;
-  bottom: 80px;
+  bottom: 60px;
   left: 0;
   width: 100%;
-  height: 50px;
+  height: 40px;
   z-index: 4;
   overflow: hidden;
   pointer-events: none;
@@ -663,44 +663,73 @@ body {
   setInterval(updateTimer, 1000);
 })();
 
-// ==================== MUSIC — Rasputin MP3 ====================
-const bgMusic = document.createElement('audio');
-bgMusic.src = 'assets/rasputin.mp3';
-bgMusic.loop = true;
-bgMusic.volume = 0.5;
-bgMusic.preload = 'auto';
-document.body.appendChild(bgMusic);
+// ==================== MUSIC — Super Mario Theme (Web Audio) ====================
+let marioCtx = null;
+let marioPlaying = false;
+let marioTimer = null;
 
-function stopLandingMusic() { bgMusic.pause(); bgMusic.currentTime = 0; }
+function playMarioTheme() {
+  if (marioPlaying) return;
+  try {
+    marioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (marioCtx.state === 'suspended') marioCtx.resume();
+  } catch(e) { return; }
+  marioPlaying = true;
 
-// Play on first user gesture — try multiple approaches
+  const bpm = 200, bl = 60/bpm;
+  function n(freq,start,dur,type,vol) {
+    if (!marioCtx) return;
+    const o=marioCtx.createOscillator(), g=marioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,start);
+    g.gain.exponentialRampToValueAtTime(0.001,start+dur);
+    o.connect(g); g.connect(marioCtx.destination);
+    o.start(start); o.stop(start+dur);
+  }
+  const melody = [
+    [659,1],[659,1],[0,1],[659,1],[0,1],[523,1],[659,2],
+    [784,2],[0,2],[392,2],[0,2],
+    [523,2],[0,1],[392,2],[0,1],[330,2],[0,1],
+    [440,2],[494,1],[466,1],[440,2],
+    [392,1.5],[659,1.5],[784,1],[880,2],[698,1],[784,1],
+    [0,1],[659,2],[523,1],[587,1],[494,1],[0,1],
+    [523,2],[0,1],[392,2],[0,1],[330,2],[0,1],
+    [440,2],[494,1],[466,1],[440,2],
+    [392,1.5],[659,1.5],[784,1],[880,2],[698,1],[784,1],
+    [0,1],[659,2],[523,1],[587,1],[494,1],[0,1],
+  ];
+  const bass = [
+    [196,2],[196,2],[196,2],[196,2],[262,2],[262,2],[196,2],[196,2],
+    [175,2],[175,2],[220,2],[220,2],[196,2],[262,2],[330,2],[262,2],
+    [175,2],[175,2],[220,2],[220,2],[196,2],[262,2],[330,2],[262,2],
+    [175,2],[175,2],[220,2],[220,2],[196,2],[262,2],[330,2],[262,2],
+  ];
+  function loop() {
+    if (!marioPlaying) return;
+    const now=marioCtx.currentTime; let t=now+0.1;
+    melody.forEach(([f,b2])=>{ if(f>0)n(f,t,bl*b2*0.9,'square',0.05); t+=bl*b2; });
+    let bt=now+0.1;
+    bass.forEach(([f,b2])=>{ if(f>0)n(f,bt,bl*b2*0.8,'triangle',0.06); bt+=bl*b2; });
+    marioTimer=setTimeout(loop,(t-now-0.5)*1000);
+  }
+  loop();
+}
+
+function stopLandingMusic() {
+  marioPlaying = false;
+  if (marioTimer) { clearTimeout(marioTimer); marioTimer=null; }
+  if (marioCtx) { marioCtx.close().catch(()=>{}); marioCtx=null; }
+}
+
+// Play on first user gesture
 let musicStarted = false;
 function startMusic() {
   if (musicStarted) return;
   musicStarted = true;
-  // Method 1: direct play
-  const p = bgMusic.play();
-  if (p && p.catch) {
-    p.catch(function(err) {
-      // Method 2: retry on next click if first attempt fails
-      musicStarted = false;
-      document.addEventListener('click', function retry() {
-        bgMusic.play().catch(function(){});
-        musicStarted = true;
-        document.removeEventListener('click', retry);
-      });
-    });
-  }
+  playMarioTheme();
 }
-
-// Attach to user gestures
 ['click','keydown','touchstart','mousedown','pointerdown'].forEach(function(e) {
   document.addEventListener(e, startMusic, { once: true });
-});
-// Also try on START button specifically
-document.addEventListener('DOMContentLoaded', function() {
-  var btn = document.querySelector('.start-btn');
-  if (btn) btn.addEventListener('click', function() { if (!musicStarted) startMusic(); });
 });
 
 // Screen management
