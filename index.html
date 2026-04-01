@@ -673,40 +673,44 @@ function playLandingMusic() {
   landingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   landingMusicPlaying = true;
 
-  const bpm = 110;
+  const bpm = 128;
   const b = 60 / bpm;
 
-  // Dramatic Dhurandhar theme — Indian scale, heavy bass, robotic feel
-  // Using Bhairavi-ish scale with electronic/synth texture
+  // Rasputin (Boney M) — "Ra Ra Rasputin" chiptune instrumental
+  // Key of Bm, iconic disco melody
   const melody = [
-    // "Dhurandhar" spelled out musically — each syllable is a note
-    // DHU - RAN - DHAR (3 heavy hits)
-    [196,2],[0,0.5],[262,1.5],[0,0.5],[196,2.5],[0,1],
-    // Ascending tension
-    [220,1],[247,1],[262,1],[294,1],[330,2],[0,1],
-    // DHU - RAN - DHAR repeat (higher)
-    [392,2],[0,0.5],[523,1.5],[0,0.5],[392,2.5],[0,1],
-    // Descending resolve
-    [349,1],[330,1],[294,1],[262,1],[247,1],[220,1],[196,3],[0,1],
-    // Robotic staccato section
-    [262,0.5],[262,0.5],[0,0.25],[330,0.5],[330,0.5],[0,0.25],
-    [392,0.5],[392,0.5],[0,0.25],[523,0.5],[523,0.5],[0,0.5],
-    // Final dramatic descent
-    [523,1],[494,0.5],[440,0.5],[392,1],[349,0.5],[330,0.5],[294,1],[262,1],[196,3],[0,2],
+    // Intro riff (the iconic "dun dun dun-dun-dun")
+    [494,1],[0,0.5],[494,0.5],[440,0.5],[494,0.5],[587,1],[494,1],[0,1],
+    [494,1],[0,0.5],[494,0.5],[440,0.5],[494,0.5],[659,1],[587,1],[0,1],
+    // "Ra Ra Rasputin" melody
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [440,0.5],[494,0.5],[440,0.5],[370,1],[330,1],[0,0.5],
+    // "Lover of the Russian queen"
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [494,0.5],[440,0.5],[370,0.5],[330,1],[370,1],[0,1],
+    // "There was a cat that really was gone"
+    [494,0.5],[494,0.5],[587,0.5],[659,0.5],[740,1],[659,0.5],[587,0.5],[494,1],[0,0.5],
+    [440,0.5],[494,0.5],[440,0.5],[370,1],[330,2],[0,1],
+    // "Ra Ra Rasputin" repeat
+    [494,0.75],[494,0.75],[587,0.5],[659,1],[587,0.5],[494,0.5],[440,1],[0,0.5],
+    [494,0.5],[440,0.5],[370,0.5],[330,1],[370,2],[0,2],
   ];
 
-  // Heavy bass + tabla rhythm
+  // Disco bass line (Bm - Em - F# - Bm pattern)
   const bass = [
-    [98,1.5],[0,0.5],[98,0.5],[0,0.5],[131,1],[0,1],
-    [98,1.5],[0,0.5],[98,0.5],[0,0.5],[131,1],[0,1],
-    [131,1.5],[0,0.5],[131,0.5],[0,0.5],[175,1],[0,1],
-    [131,1],[98,0.5],[98,0.5],[131,1],[175,0.5],[175,0.5],[131,1],[98,2],[0,1],
-    [98,0.5],[98,0.5],[0,0.25],[98,0.5],[98,0.5],[0,0.25],
-    [131,0.5],[131,0.5],[0,0.25],[131,0.5],[131,0.5],[0,0.5],
-    [175,1],[131,0.5],[131,0.5],[98,1],[98,0.5],[98,0.5],[98,1],[98,1],[65,3],[0,2],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,0.5],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[165,0.5],[0,0.5],[165,0.5],[0,0.5],
+    [185,0.5],[0,0.5],[185,0.5],[0,0.5],[123,0.5],[0,0.5],[123,1],[0,1],
+    [123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],[123,0.5],[0,0.5],
+    [165,0.5],[0,0.5],[165,0.5],[0,0.5],[185,0.5],[0,0.5],[185,0.5],[0,1],
   ];
 
-  function playNote(freq, start, dur, type, vol) {
+  function pNote(freq, start, dur, type, vol) {
     if (!landingAudioCtx) return;
     const osc = landingAudioCtx.createOscillator();
     const gain = landingAudioCtx.createGain();
@@ -720,55 +724,37 @@ function playLandingMusic() {
     osc.stop(start + dur);
   }
 
-  // Robotic voice effect — sawtooth + vibrato for "electronic" texture
-  function playRoboNote(freq, start, dur) {
-    if (!landingAudioCtx) return;
-    const osc = landingAudioCtx.createOscillator();
-    const vibrato = landingAudioCtx.createOscillator();
-    const vibratoGain = landingAudioCtx.createGain();
-    const gain = landingAudioCtx.createGain();
-
-    osc.type = 'sawtooth';
-    osc.frequency.value = freq;
-    vibrato.type = 'sine';
-    vibrato.frequency.value = 6; // 6Hz vibrato for robotic warble
-    vibratoGain.gain.value = 8; // Subtle pitch wobble
-    vibrato.connect(vibratoGain);
-    vibratoGain.connect(osc.frequency);
-
-    gain.gain.setValueAtTime(0.04, start);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-    osc.connect(gain);
-    gain.connect(landingAudioCtx.destination);
-    osc.start(start);
-    osc.stop(start + dur);
-    vibrato.start(start);
-    vibrato.stop(start + dur);
-  }
-
   function scheduleLoop() {
     if (!landingMusicPlaying) return;
     const now = landingAudioCtx.currentTime;
     let t = now + 0.1;
 
-    // Melody — robotic sawtooth with vibrato
+    // Melody — square wave (catchy chiptune lead)
     melody.forEach(([freq, beats]) => {
-      if (freq > 0) playRoboNote(freq, t, b * beats * 0.85);
+      if (freq > 0) pNote(freq, t, b * beats * 0.85, 'square', 0.05);
       t += b * beats;
     });
 
-    // Bass — deep triangle wave
+    // Bass — triangle wave (pumping disco bass)
     let bt = now + 0.1;
     bass.forEach(([freq, beats]) => {
-      if (freq > 0) playNote(freq, bt, b * beats * 0.7, 'triangle', 0.07);
+      if (freq > 0) pNote(freq, bt, b * beats * 0.7, 'triangle', 0.07);
       bt += b * beats;
     });
 
-    // Percussion hits on downbeats
-    let pt = now + 0.1;
-    for (let i = 0; i < 24; i++) {
-      playNote(80 + Math.random()*40, pt, 0.08, 'square', 0.03);
-      pt += b * 2;
+    // Disco hi-hat (noise channel, steady 8th notes)
+    let ht = now + 0.1;
+    const totalBeats = melody.reduce((s,[,beats]) => s+beats, 0);
+    for (let i = 0; i < totalBeats * 2; i++) {
+      pNote(8000 + Math.random()*2000, ht, 0.03, 'square', 0.015);
+      ht += b * 0.5;
+    }
+
+    // Kick on beats 1 and 3
+    let kt = now + 0.1;
+    for (let i = 0; i < totalBeats / 2; i++) {
+      pNote(55, kt, 0.1, 'triangle', 0.08);
+      kt += b * 2;
     }
 
     const loopLen = t - now;
