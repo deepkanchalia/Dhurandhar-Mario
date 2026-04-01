@@ -303,37 +303,61 @@ body {
 }
 
 /* ==================== SCREEN 2: EMAIL ==================== */
-#screen-auth { background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%); }
+#screen-auth {
+  background: linear-gradient(135deg, #0a0a1a 0%, #16213e 50%, #1a1a2e 100%);
+  position: relative;
+}
+.auth-home-btn {
+  position: absolute;
+  top: 20px; left: 24px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+  z-index: 10;
+}
+.auth-home-btn:hover { color: var(--coin-gold); }
 .auth-box {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 40px;
-  max-width: 460px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 36px 40px 32px;
+  max-width: 440px;
   width: 90%;
   text-align: center;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
-.auth-title { font-size:clamp(12px,3vw,18px); color:var(--coin-gold); margin-bottom:8px; }
-.auth-subtitle { font-size:9px; color:rgba(255,255,255,0.4); margin-bottom:28px; line-height:1.6; }
-.input-group { margin-bottom:14px; }
+.auth-hero-icon { margin-bottom: 16px; }
+.auth-title { font-size:clamp(12px,3vw,16px); color:var(--coin-gold); margin-bottom:6px; text-shadow:1px 1px 0 rgba(0,0,0,0.3); }
+.auth-subtitle { font-size:8px; color:rgba(255,255,255,0.45); margin-bottom:24px; line-height:1.8; }
+.input-group { margin-bottom:16px; text-align:left; }
+.input-label {
+  display:block; font-size:7px; color:rgba(255,255,255,0.5);
+  margin-bottom:6px; letter-spacing:2px;
+}
 .input-group input {
   width:100%; padding:14px 16px;
   font-family:'Press Start 2P',monospace; font-size:9px;
-  background:rgba(255,255,255,0.06); border:2px solid rgba(255,255,255,0.1);
-  border-radius:8px; color:var(--text-white); outline:none; transition:border-color 0.2s;
+  background:rgba(0,0,0,0.3); border:2px solid rgba(255,255,255,0.08);
+  border-radius:10px; color:var(--text-white); outline:none;
+  transition:all 0.2s;
 }
-.input-group input:focus { border-color:var(--coin-gold); }
-.input-group input::placeholder { color:rgba(255,255,255,0.25); }
+.input-group input:focus { border-color:var(--coin-gold); background:rgba(0,0,0,0.4); box-shadow:0 0 15px rgba(248,184,0,0.1); }
+.input-group input::placeholder { color:rgba(255,255,255,0.2); }
 .continue-btn {
-  font-family:'Press Start 2P',monospace; font-size:11px; padding:14px 32px;
-  background:var(--pipe-green); color:white; border:none; border-radius:8px;
-  cursor:pointer; width:100%; margin-top:8px; box-shadow:0 4px 0 var(--pipe-dark); transition:all 0.1s;
+  font-family:'Press Start 2P',monospace; font-size:12px; padding:16px 32px;
+  background:linear-gradient(135deg, var(--mario-red), #cc2200); color:white;
+  border:none; border-radius:10px;
+  cursor:pointer; width:100%; margin-top:10px;
+  box-shadow:0 4px 0 #8a1a00, 0 6px 20px rgba(248,56,0,0.2);
+  transition:all 0.15s; letter-spacing:1px;
 }
-.continue-btn:hover { transform:translateY(-1px); box-shadow:0 5px 0 var(--pipe-dark); }
-.continue-btn:active { transform:translateY(3px); box-shadow:0 1px 0 var(--pipe-dark); }
-.skip-link { display:inline-block; margin-top:20px; font-size:7px; color:rgba(255,255,255,0.35); text-decoration:none; cursor:pointer; }
-.skip-link:hover { color:rgba(255,255,255,0.6); }
+.continue-btn:hover { transform:translateY(-2px); box-shadow:0 6px 0 #8a1a00, 0 10px 30px rgba(248,56,0,0.3); }
+.continue-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #8a1a00; }
+.auth-privacy { font-size:6px; color:rgba(255,255,255,0.25); margin-top:16px; letter-spacing:1px; }
 .error-msg { color:var(--mario-red); font-size:8px; margin-top:8px; min-height:16px; }
 
 /* ==================== SCREEN 3: PLAYER SELECT ==================== */
@@ -546,19 +570,26 @@ body {
 
 <!-- ==================== SCREEN 2: EMAIL ==================== -->
 <div id="screen-auth" class="screen">
+  <a class="auth-home-btn" onclick="showScreen('screen-hero')">&#8592; HOME</a>
   <div class="auth-box">
-    <h2 class="auth-title">ENTER YOUR NAME, WARRIOR</h2>
-    <p class="auth-subtitle">Register to save your progress<br>and claim your reward</p>
+    <div class="auth-hero-icon">
+      <img src="assets/hero.png" alt="Dhurandhar" style="width:60px;height:75px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
+    </div>
+    <h2 class="auth-title">REGISTER TO PLAY</h2>
+    <p class="auth-subtitle">Enter your details to start the challenge<br>and claim your $1,000 Claude Credits</p>
     <form id="auth-form" onsubmit="handleAuth(event)">
       <div class="input-group">
-        <input type="text" id="player-name" placeholder="YOUR NAME" required autocomplete="name">
+        <label class="input-label">NAME</label>
+        <input type="text" id="player-name" placeholder="Enter your name" required autocomplete="name">
       </div>
       <div class="input-group">
-        <input type="email" id="player-email" placeholder="YOUR EMAIL" required autocomplete="email">
+        <label class="input-label">EMAIL</label>
+        <input type="email" id="player-email" placeholder="Enter your email" required autocomplete="email">
       </div>
       <div class="error-msg" id="auth-error"></div>
-      <button type="submit" class="continue-btn">CONTINUE</button>
+      <button type="submit" class="continue-btn">START PLAYING</button>
     </form>
+    <p class="auth-privacy">Your info is stored securely and never shared</p>
   </div>
 </div>
 
