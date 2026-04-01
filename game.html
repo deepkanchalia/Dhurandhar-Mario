@@ -598,7 +598,7 @@ function update() {
     endingTimer++;
 
     if (endingPhase === 0) {
-      // Phase 0: Mario auto-walks toward castle
+      // Phase 0: Hero auto-walks toward castle
       player.vx = 2; player.facingRight = true;
       player.vy += GRAVITY_FULL;
       const solids = getSolidsNear(player.x, CANVAS_WIDTH).filter(s => !(s.type==='brick'&&s.hit));
@@ -606,39 +606,65 @@ function update() {
       resolveCollisionsX(player, solids);
       player.y += player.vy;
       resolveCollisionsY(player, solids, false);
-      // Walk animation
       player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
-      // Camera follows
       const targetCam = player.x - CANVAS_WIDTH/3;
       const newCamX = Math.floor(Math.max(0, Math.min(targetCam, LEVEL_WIDTH-CANVAS_WIDTH)));
       if (newCamX > camera.x) camera.x = newCamX;
-      // Reached castle
-      if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; playVictoryMusic(); }
+      if (player.x >= castleX + TILE) { endingPhase = 1; endingTimer = 0; player.vx = 0; player.walkFrame = 0; }
     }
     else if (endingPhase === 1) {
       // Phase 1: Queen emerges from castle
       if (endingTimer === 1) { queenEntity.visible = true; queenEntity.x = castleX + TILE*2; }
-      if (endingTimer < 60) {
-        queenEntity.x -= 0.8; // Walk out
-      }
+      if (endingTimer < 60) queenEntity.x -= 0.8;
       if (endingTimer >= 60) { endingPhase = 2; endingTimer = 0; }
     }
     else if (endingPhase === 2) {
-      // Phase 2: They move toward each other (hug)
+      // Phase 2: Hero and Queen walk toward each other
       if (endingTimer < 40) {
         if (Math.abs(player.x - queenEntity.x) > 10) {
           player.x += 1; player.facingRight = true;
           player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
         }
       }
-      if (endingTimer >= 60) { endingPhase = 3; endingTimer = 0; }
+      if (endingTimer >= 50) { endingPhase = 3; endingTimer = 0; }
     }
     else if (endingPhase === 3) {
-      // Phase 3: Hug animation (hearts) then show voucher after delay
-      if (endingTimer >= 120) { endingPhase = 4; endingTimer = 0; }
+      // Phase 3: Love + Fireworks (3-5 sec) — hearts float, fireworks burst
+      // Both walk into castle together
+      if (endingTimer < 90) {
+        player.x += 0.8; player.facingRight = true;
+        queenEntity.x += 0.8;
+        player.walkTimer++; if (player.walkTimer>6) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
+      }
+      // Hide them once inside castle
+      if (endingTimer === 90) { player.y = -999; queenEntity.visible = false; }
+      // Wait 3 sec (180 frames) total
+      if (endingTimer >= 180) { endingPhase = 4; endingTimer = 0; }
     }
-    // Phase 4: Voucher screen (handled in draw)
-    // Phase 5: April Fool (handled via click in HTML overlay)
+    else if (endingPhase === 4) {
+      // Phase 4: Hero comes out of castle after 3 sec
+      if (endingTimer === 1) {
+        const groundY = CANVAS_HEIGHT - TILE*2;
+        player.y = groundY - player.h; player.x = castleX + TILE*2;
+        player.facingRight = false; // facing left initially
+      }
+      // Wait 3 sec (180 frames)
+      if (endingTimer >= 180) { endingPhase = 5; endingTimer = 0; playVictoryMusic(); }
+    }
+    else if (endingPhase === 5) {
+      // Phase 5: Hero runs right for 2 sec (opposite of flag) + Rasputin plays + fireworks
+      player.facingRight = true;
+      player.x += 3;
+      player.walkTimer++; if (player.walkTimer>4) { player.walkTimer=0; player.walkFrame=(player.walkFrame+1)%4; }
+      // Camera follows
+      const targetCam2 = player.x - CANVAS_WIDTH/3;
+      const newCamX2 = Math.floor(Math.max(0, Math.min(targetCam2, LEVEL_WIDTH-CANVAS_WIDTH)));
+      if (newCamX2 > camera.x) camera.x = newCamX2;
+      // After 2 sec (120 frames) show congratulations
+      if (endingTimer >= 120) { endingPhase = 6; endingTimer = 0; }
+    }
+    // Phase 6: Congratulations banner (handled in draw)
+    // Phase 7: April Fool (handled via click in HTML overlay)
 
     keysJustPressed['Space'] = false;
     return;
@@ -1143,6 +1169,32 @@ function drawCastle(cx, groundY) {
   ctx.fill();
 }
 
+function drawFireworks() {
+  const t = Date.now() / 1000;
+  const colors = ['#FF4444','#FFD700','#00FF88','#FF69B4','#44AAFF','#FFFFFF'];
+  for (let i = 0; i < 8; i++) {
+    const cx = (Math.sin(t*0.7 + i*1.7) * 0.4 + 0.5) * CANVAS_WIDTH;
+    const cy = (Math.sin(t*0.5 + i*2.3) * 0.2 + 0.25) * CANVAS_HEIGHT;
+    const phase = (t*2 + i*0.8) % 2;
+    if (phase < 1.2) {
+      const spread = phase * 30;
+      const alpha = 1 - phase/1.2;
+      ctx.globalAlpha = alpha;
+      for (let j = 0; j < 12; j++) {
+        const angle = (j/12) * Math.PI * 2;
+        const px = cx + Math.cos(angle) * spread;
+        const py = cy + Math.sin(angle) * spread;
+        ctx.fillStyle = colors[(i+j) % colors.length];
+        ctx.beginPath(); ctx.arc(px, py, 2 + phase*2, 0, Math.PI*2); ctx.fill();
+      }
+      // Center flash
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath(); ctx.arc(cx, cy, 4 - phase*3, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
 function drawHearts(cx, cy) {
   const t = Date.now() / 300;
   for (let i = 0; i < 5; i++) {
@@ -1347,37 +1399,49 @@ function draw() {
   drawHUD();
 
   if (gameState==='LEVEL_COMPLETE') {
-    // Draw hearts during hug phase
-    if (endingPhase >= 2 && endingPhase <= 3) {
+    // Hearts during phases 2-3 (walking together + entering castle)
+    if (endingPhase >= 2 && endingPhase <= 3 && player.y > 0) {
       const px = player.x - camera.x;
       drawHearts(px + player.w/2, player.y - 10);
     }
 
-    // Voucher screen (phase 4)
-    if (endingPhase >= 4 && !showAprilFool) {
+    // Fireworks during phases 3-6 (love scene + victory run + congrats)
+    if (endingPhase >= 3 && !showAprilFool) {
+      drawFireworks();
+    }
+
+    // Congratulations banner (phase 6)
+    if (endingPhase >= 6 && !showAprilFool) {
       ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
 
-      ctx.fillStyle=C.COIN_GOLD; ctx.font='bold 36px "Courier New", monospace'; ctx.textAlign='center';
-      ctx.fillText('CONGRATULATIONS!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-80);
+      // Fireworks on top of dark overlay
+      drawFireworks();
 
-      ctx.fillStyle=C.TEXT_WHITE; ctx.font='22px "Courier New", monospace';
-      ctx.fillText("You've Won!",CANVAS_WIDTH/2,CANVAS_HEIGHT/2-40);
+      ctx.fillStyle=C.COIN_GOLD; ctx.font='bold 32px "Courier New", monospace'; ctx.textAlign='center';
+      ctx.fillText('CONGRATULATIONS!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-90);
 
-      ctx.fillStyle=C.TEXT_WHITE; ctx.font='20px "Courier New", monospace';
-      ctx.fillText('Score: '+score,CANVAS_WIDTH/2,CANVAS_HEIGHT/2);
+      // Random player count 8990-10113
+      if (!window._endPlayerCount) window._endPlayerCount = 8990 + Math.floor(Math.random()*1124);
+      ctx.fillStyle=C.TEXT_WHITE; ctx.font='16px "Courier New", monospace';
+      ctx.fillText(window._endPlayerCount+' players played and',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-55);
+
+      ctx.fillStyle=C.COIN_GOLD; ctx.font='bold 28px "Courier New", monospace';
+      ctx.fillText('YOU WON!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2-20);
+
+      ctx.fillStyle=C.TEXT_WHITE; ctx.font='18px "Courier New", monospace';
+      ctx.fillText('Score: '+score,CANVAS_WIDTH/2,CANVAS_HEIGHT/2+15);
 
       // Clickable voucher button
-      ctx.fillStyle='#E80000';
-      const btnX=CANVAS_WIDTH/2-180, btnY=CANVAS_HEIGHT/2+30, btnW=360, btnH=50;
+      ctx.fillStyle='#00A800';
+      const btnX=CANVAS_WIDTH/2-190, btnY=CANVAS_HEIGHT/2+40, btnW=380, btnH=50;
       ctx.beginPath(); ctx.roundRect(btnX,btnY,btnW,btnH,10); ctx.fill();
-      ctx.fillStyle='#FFF'; ctx.font='bold 18px "Courier New", monospace';
-      ctx.fillText('Click to Claim $100 Claude Voucher',CANVAS_WIDTH/2,btnY+32);
+      ctx.fillStyle='#FFF'; ctx.font='bold 14px "Courier New", monospace';
+      ctx.fillText('Click to Unlock $100 Claude Credits',CANVAS_WIDTH/2,btnY+32);
 
-      // Store button bounds for click detection
       window._voucherBtn = {x:btnX,y:btnY,w:btnW,h:btnH};
     }
 
-    // April Fool screen — handled by HTML overlay (not canvas)
+    // April Fool screen — handled by HTML overlay
     if (showAprilFool) {
       document.getElementById('april-overlay').classList.add('show');
     }
@@ -1484,7 +1548,7 @@ canvas.addEventListener('click', (e) => {
   }
 
   // Voucher button → April Fool reveal
-  if (gameState==='LEVEL_COMPLETE' && endingPhase>=4 && !showAprilFool && hitTest(window._voucherBtn)) {
+  if (gameState==='LEVEL_COMPLETE' && endingPhase>=6 && !showAprilFool && hitTest(window._voucherBtn)) {
     showAprilFool = true;
   }
 
