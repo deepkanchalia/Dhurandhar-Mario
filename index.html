@@ -528,6 +528,7 @@ body {
     </div>
 
     <p class="credits">BUILT BY RETHINK CONTENT STUDIO</p>
+    <p class="credits" style="margin-top:8px;color:rgba(255,255,255,0.45);">BEST EXPERIENCED ON DESKTOP / LAPTOP</p>
   </div>
 </div>
 
@@ -546,7 +547,6 @@ body {
       <div class="error-msg" id="auth-error"></div>
       <button type="submit" class="continue-btn">CONTINUE</button>
     </form>
-    <a class="skip-link" onclick="skipAuth()">SKIP FOR NOW</a>
   </div>
 </div>
 
@@ -639,11 +639,6 @@ function handleAuth(e) {
   const players = JSON.parse(localStorage.getItem('dhurandhar_players') || '[]');
   players.push(playerData);
   localStorage.setItem('dhurandhar_players', JSON.stringify(players));
-  showScreen('screen-select');
-}
-
-function skipAuth() {
-  sessionStorage.setItem('dhurandhar_player', JSON.stringify({ name:'WARRIOR', email:'', skipped:true }));
   showScreen('screen-select');
 }
 

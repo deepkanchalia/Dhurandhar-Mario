@@ -1640,14 +1640,10 @@ const aprilObserver = new MutationObserver(() => {
 });
 aprilObserver.observe(document.getElementById('april-overlay'), {attributes:true, attributeFilter:['class']});
 
-// Close button — stops all audio and closes
+// Close button — go back to landing page
 document.getElementById('close-btn').addEventListener('click', () => {
   stopMusic();
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
-  window.close();
-  setTimeout(() => {
-    document.body.innerHTML = '<div style="color:#F8F8F8;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;font-size:24px;">Game closed. You can close this tab.</div>';
-  }, 200);
+  window.location.href = 'index.html';
 });
 
 // Also stop music if user navigates away or closes tab
