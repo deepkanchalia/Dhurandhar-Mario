@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'none'; connect-src 'none'; frame-src 'none';">
 <title>Dhurandhar: The Game</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -466,7 +468,7 @@ function buildLevel() {
   for (let i = 0; i < 8; i++) for (let j = 0; j <= i; j++)
     platforms.push({ x: (250+i)*TILE, y: groundY-(j+1)*TILE, w: TILE, h: TILE, type: 'stair' });
 
-  flagPole = { x: 258*TILE, y: groundY - TILE*10, w: 8, h: TILE*10 };
+  flagPole = { x: 262*TILE, y: groundY - TILE*10, w: 8, h: TILE*10 };
   castleX = 264*TILE;
   queenEntity = { x: castleX + TILE*2, y: groundY - 50, w: 36, h: 50, visible: false };
 
@@ -1438,9 +1440,17 @@ function draw() {
       ctx.fillStyle='#FFF';
       ctx.fillText('Copy Link',CANVAS_WIDTH/2+90,shareY+24);
 
+      // Home button
+      const homeY = shareY + 50;
+      ctx.fillStyle='rgba(255,255,255,0.15)';
+      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2-80,homeY,160,36,8); ctx.fill();
+      ctx.fillStyle='#FFF'; ctx.font='bold 14px "Courier New", monospace';
+      ctx.fillText('HOME',CANVAS_WIDTH/2,homeY+24);
+
       // Store button bounds
       window._linkedinBtn = {x:CANVAS_WIDTH/2-170,y:shareY,w:160,h:36};
       window._copyBtn = {x:CANVAS_WIDTH/2+10,y:shareY,w:160,h:36};
+      window._homeBtn = {x:CANVAS_WIDTH/2-80,y:homeY,w:160,h:36};
     }
   }
 }
@@ -1551,18 +1561,24 @@ canvas.addEventListener('click', (e) => {
 
   // LinkedIn share
   if (showAprilFool && hitTest(window._linkedinBtn)) {
-    const shareUrl = window.location.origin + window.location.pathname;
+    const shareUrl = window.location.origin + window.location.pathname.replace('game.html','');
     const text = "I just played Dhurandhar Mario and fell for the April Fool's prank! 😂🎮 Try it yourself:";
     window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(shareUrl)+'&summary='+encodeURIComponent(text), '_blank');
   }
 
   // Copy link
   if (showAprilFool && hitTest(window._copyBtn)) {
-    const shareUrl = window.location.origin + window.location.pathname;
+    const shareUrl = window.location.origin + window.location.pathname.replace('game.html','');
     navigator.clipboard.writeText(shareUrl).then(() => {
       window._copyMsg = 'Copied!';
       setTimeout(() => { window._copyMsg = ''; }, 2000);
     });
+  }
+
+  // Home button
+  if (showAprilFool && hitTest(window._homeBtn)) {
+    stopMusic();
+    window.location.href = 'index.html';
   }
 });
 
