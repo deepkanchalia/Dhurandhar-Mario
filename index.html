@@ -50,8 +50,10 @@ canvas {
 // ==================== CONSTANTS ====================
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 720;
-const GRAVITY = 0.7;
-const JUMP_FORCE = -16;
+const GRAVITY = 0.45;
+const GRAVITY_FULL = 0.9;
+const JUMP_FORCE = -14;
+const MAX_FALL = 12;
 const MOVE_SPEED = 0.5;
 const MAX_SPEED = 5;
 const FRICTION = 0.85;
@@ -507,7 +509,7 @@ function resolveCollisionsY(entity, solids, isPlayer) {
       if (isPlayer) {
         if (s.type === 'question' && !s.hit) {
           s.hit = true; s.animY = -8;
-          if (s.content === 'coin') { score += 100; coins++; spawnCoinParticle(s.x+TILE/2, s.y); playSFX('coin'); }
+          if (s.content === 'coin') { score += 200; coins++; spawnCoinParticle(s.x+TILE/2, s.y); playSFX('coin'); }
           else if (s.content === 'mushroom') { spawnMushroom(s.x, s.y); playSFX('block'); }
         } else if (s.type === 'brick' && !s.hit) {
           s.hit = true; s.animY = -4; spawnBrickParticles(s.x+TILE/2, s.y); playSFX('block');
@@ -539,7 +541,7 @@ function updateMushrooms() {
   mushrooms.forEach(m => {
     if (m.collected) return;
     if (m.spawnAnim > 0) { m.spawnAnim--; m.y -= 1.5; return; }
-    m.vy += GRAVITY;
+    m.vy += GRAVITY_FULL;
     const pv = m.vx; m.x += m.vx;
     resolveCollisionsX(m, activeSolids);
     if (m.vx===0 && pv!==0) m.vx = -pv;
@@ -570,7 +572,7 @@ function update() {
     return;
   }
   if (gameState === 'DEATH') {
-    deathTimer--; player.vy += GRAVITY*0.5; player.y += player.vy;
+    deathTimer--; player.vy += GRAVITY_FULL*0.5; player.y += player.vy;
     if (deathTimer<=0) {
       if (lives<=0) { gameState='GAME_OVER'; stopMusic(); playSFX('gameover'); }
       else { resetLevel(); gameState='PLAYING'; playOverworldMusic(); }
@@ -597,7 +599,13 @@ function update() {
   }
   keysJustPressed['Space'] = false; keysJustPressed['ArrowUp'] = false;
 
-  player.vy += GRAVITY;
+  // Variable jump: hold jump = float (low gravity), release = fast fall (high gravity)
+  if (player.vy < 0 && (keys['Space'] || keys['ArrowUp'])) {
+    player.vy += GRAVITY; // Reduced gravity while rising + holding
+  } else {
+    player.vy += GRAVITY_FULL; // Full gravity when falling or jump released
+  }
+  if (player.vy > MAX_FALL) player.vy = MAX_FALL; // Terminal velocity
   const solids = getSolidsNear(player.x, CANVAS_WIDTH).filter(s => !(s.type==='brick'&&s.hit));
   player.x += player.vx;
   if (player.x<0) { player.x=0; player.vx=0; }
@@ -614,7 +622,7 @@ function update() {
   if (player.y>CANVAS_HEIGHT+50) { playerDie(); return; }
 
   if (flagPole && player.x+player.w > flagPole.x && player.x < flagPole.x+flagPole.w+20) {
-    gameState='LEVEL_COMPLETE'; levelCompleteTimer=180; score+=timer*10; stopMusic(); playSFX('levelcomplete');
+    gameState='LEVEL_COMPLETE'; levelCompleteTimer=180; score+=timer*50; stopMusic(); playSFX('levelcomplete');
     return;
   }
 
@@ -626,13 +634,14 @@ function update() {
     if (Math.abs(enemy.x-player.x) > CANVAS_WIDTH*2) return;
     const eSolids = getSolidsNear(enemy.x, TILE*6).filter(s => !(s.type==='brick'&&s.hit));
     if (enemy.isShell && !enemy.shellMoving) {
-      enemy.vy+=GRAVITY; enemy.y+=enemy.vy; resolveCollisionsY(enemy,eSolids,false); return;
+      enemy.vy+=GRAVITY_FULL; enemy.y+=enemy.vy; resolveCollisionsY(enemy,eSolids,false); return;
     }
-    enemy.vy+=GRAVITY;
+    enemy.vy+=GRAVITY_FULL;
     const pv=enemy.vx; enemy.x+=enemy.vx; resolveCollisionsX(enemy,eSolids);
     if (enemy.vx===0&&pv!==0) { enemy.vx=-pv; enemy.facingRight=enemy.vx>0; }
     enemy.y+=enemy.vy; resolveCollisionsY(enemy,eSolids,false);
-    if (!enemy.isShell && enemy.onGround) {
+    // Koopas reverse at edges (they're smart), Goombas walk off (they're mindless) — just like real Mario
+    if (!enemy.isShell && enemy.onGround && enemy.type === 'koopa') {
       const nx=enemy.vx>0?enemy.x+enemy.w+2:enemy.x-2;
       let edge=true;
       for (let s of eSolids) { if(nx>=s.x&&nx<=s.x+s.w&&enemy.y+enemy.h>=s.y&&enemy.y+enemy.h<=s.y+4){edge=false;break;}}
@@ -671,7 +680,7 @@ function update() {
     if (item.collected) return;
     item.bobOffset += 0.05;
     const ir = {x:item.x, y:item.y+Math.sin(item.bobOffset)*4, w:item.w, h:item.h};
-    if (rectCollide(player,ir)) { item.collected=true; score+=50; coins++; spawnCoinParticle(item.x+item.w/2,item.y); playSFX('coin'); }
+    if (rectCollide(player,ir)) { item.collected=true; score+=200; coins++; spawnCoinParticle(item.x+item.w/2,item.y); playSFX('coin'); }
   });
 
   particles.forEach(p => { p.life--; if(p.vx!==undefined)p.x+=p.vx; p.y+=p.vy;
@@ -680,8 +689,10 @@ function update() {
   });
   particles = particles.filter(p => p.life>0);
 
+  // Ratchet scroll — camera only moves right, never left (like real Mario)
   const targetCam = player.x - CANVAS_WIDTH/3;
-  camera.x = Math.floor(Math.max(0, Math.min(targetCam, LEVEL_WIDTH-CANVAS_WIDTH)));
+  const newCamX = Math.floor(Math.max(0, Math.min(targetCam, LEVEL_WIDTH-CANVAS_WIDTH)));
+  if (newCamX > camera.x) camera.x = newCamX; // Only scroll right
 }
 
 function playerDie() {
@@ -691,6 +702,8 @@ function startGame() {
   gameState='PLAYING'; timer=400; timerAccum=0; buildLevel(); resetLevel();
 }
 function resetLevel() {
+  // Full reset — enemies, blocks, items all go back to original state
+  buildLevel();
   const groundY=CANVAS_HEIGHT-TILE*2;
   player=createPlayer(3*TILE, groundY-56); camera.x=0; timer=400; timerAccum=0;
 }
@@ -1001,7 +1014,10 @@ function draw() {
         ctx.fillStyle=C.QUESTION_EMPTY; ctx.fillRect(sx,by,TILE,TILE);
         ctx.strokeStyle=C.GROUND_DARK; ctx.lineWidth=2; ctx.strokeRect(sx,by,TILE,TILE);
       } else {
-        ctx.fillStyle=C.QUESTION; ctx.fillRect(sx,by,TILE,TILE);
+        // Shimmer animation — cycle between gold shades
+        const shimmer = Math.floor(Date.now()/200) % 4;
+        const qColors = [C.QUESTION, C.QUESTION_LIGHT, C.QUESTION, C.QUESTION_DARK];
+        ctx.fillStyle=qColors[shimmer]; ctx.fillRect(sx,by,TILE,TILE);
         ctx.fillStyle=C.QUESTION_LIGHT; ctx.fillRect(sx+4,by+4,TILE-8,TILE-8);
         ctx.strokeStyle=C.QUESTION_DARK; ctx.lineWidth=2; ctx.strokeRect(sx,by,TILE,TILE);
         ctx.fillStyle=C.QUESTION_DARK; ctx.font='bold '+Math.floor(TILE*0.6)+'px Arial'; ctx.textAlign='center';
