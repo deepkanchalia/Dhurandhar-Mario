@@ -600,12 +600,12 @@ body {
     <div class="player-card" onclick="selectPlayer(1)">
       <img src="assets/hero.png" alt="Dhurandhar">
       <div class="player-label">1 PLAYER GAME</div>
-      <div class="player-name">DHURANDHAR</div>
+      <div class="player-name">HAMZA ALI MAZARI</div>
     </div>
     <div class="player-card" onclick="selectPlayer(2)">
       <img src="assets/hero2.jpg" alt="Player 2" style="border-radius:50%;">
       <div class="player-label">2 PLAYER GAME</div>
-      <div class="player-name">DEEPK</div>
+      <div class="player-name">JAMIL JAMALI</div>
     </div>
   </div>
 </div>
@@ -795,12 +795,17 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 });
 
-// Fallback: start on any user interaction if autoplay was blocked
+// Fallback: start on ANY interaction — even just entering the page with cursor
 document.addEventListener('click', initLandingMusic, { once: true });
 document.addEventListener('keydown', initLandingMusic, { once: true });
 document.addEventListener('touchstart', initLandingMusic, { once: true });
 document.addEventListener('scroll', initLandingMusic, { once: true });
 document.addEventListener('mousemove', initLandingMusic, { once: true });
+document.addEventListener('mouseenter', initLandingMusic, { once: true });
+document.addEventListener('pointerdown', initLandingMusic, { once: true });
+document.addEventListener('pointermove', initLandingMusic, { once: true });
+// Also try on focus (tab switch back)
+window.addEventListener('focus', initLandingMusic, { once: true });
 
 // Screen management
 function showScreen(id) {
