@@ -345,7 +345,7 @@ body {
   bottom: 80px;
   left: 0;
   width: 100%;
-  height: 40px;
+  height: 50px;
   z-index: 4;
   overflow: hidden;
   pointer-events: none;
@@ -354,21 +354,47 @@ body {
   position: absolute;
   bottom: 0;
   animation: enemyWalk linear infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .enemy-walk img {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-  opacity: 0.7;
+  opacity: 0.75;
+  border-radius: 50%;
 }
-.enemy-1 { animation-duration: 18s; animation-delay: 0s; }
-.enemy-2 { animation-duration: 22s; animation-delay: 4s; }
-.enemy-3 { animation-duration: 15s; animation-delay: 8s; }
-.enemy-4 { animation-duration: 25s; animation-delay: 2s; }
-.enemy-5 { animation-duration: 20s; animation-delay: 6s; }
+/* Legs container */
+.enemy-legs {
+  display: flex;
+  gap: 4px;
+  margin-top: -2px;
+}
+.enemy-leg {
+  width: 6px;
+  height: 10px;
+  background: #8B5E3C;
+  border-radius: 0 0 3px 3px;
+}
+.enemy-walk .enemy-leg:first-child { animation: legWalkL 0.4s ease-in-out infinite; }
+.enemy-walk .enemy-leg:last-child { animation: legWalkR 0.4s ease-in-out infinite; }
+@keyframes legWalkL { 0%,100%{transform:rotate(-15deg)} 50%{transform:rotate(15deg)} }
+@keyframes legWalkR { 0%,100%{transform:rotate(15deg)} 50%{transform:rotate(-15deg)} }
+
+/* Koopa enemies get green body + legs */
+.enemy-walk.koopa img { border: 2px solid #007800; }
+.enemy-walk.koopa .enemy-leg { background: #00A800; }
+
+/* 30% slower: original * 1.43 */
+.enemy-1 { animation-duration: 26s; animation-delay: 0s; }
+.enemy-2 { animation-duration: 31s; animation-delay: 5s; }
+.enemy-3 { animation-duration: 21s; animation-delay: 10s; }
+.enemy-4 { animation-duration: 36s; animation-delay: 3s; }
+.enemy-5 { animation-duration: 28s; animation-delay: 8s; }
 @keyframes enemyWalk {
   0% { left: 110%; transform: scaleX(-1); }
-  100% { left: -50px; transform: scaleX(-1); }
+  100% { left: -60px; transform: scaleX(-1); }
 }
 
 /* Countdown timer */
@@ -448,11 +474,11 @@ body {
   <div class="pipe pipe-left"><div class="pipe-top"></div><div class="pipe-body"></div></div>
   <div class="pipe pipe-right"><div class="pipe-top"></div><div class="pipe-body"></div></div>
   <div class="enemies-layer">
-    <div class="enemy-walk enemy-1"><img src="assets/goomba1.png" alt=""></div>
-    <div class="enemy-walk enemy-2"><img src="assets/goomba2.png" alt=""></div>
-    <div class="enemy-walk enemy-3"><img src="assets/koopa1.png" alt=""></div>
-    <div class="enemy-walk enemy-4"><img src="assets/goomba3.png" alt=""></div>
-    <div class="enemy-walk enemy-5"><img src="assets/koopa2.png" alt=""></div>
+    <div class="enemy-walk enemy-1"><img src="assets/goomba1.png" alt=""><div class="enemy-legs"><div class="enemy-leg"></div><div class="enemy-leg"></div></div></div>
+    <div class="enemy-walk enemy-2"><img src="assets/goomba2.png" alt=""><div class="enemy-legs"><div class="enemy-leg"></div><div class="enemy-leg"></div></div></div>
+    <div class="enemy-walk enemy-3 koopa"><img src="assets/koopa1.png" alt=""><div class="enemy-legs"><div class="enemy-leg"></div><div class="enemy-leg"></div></div></div>
+    <div class="enemy-walk enemy-4"><img src="assets/goomba3.png" alt=""><div class="enemy-legs"><div class="enemy-leg"></div><div class="enemy-leg"></div></div></div>
+    <div class="enemy-walk enemy-5 koopa"><img src="assets/koopa2.png" alt=""><div class="enemy-legs"><div class="enemy-leg"></div><div class="enemy-leg"></div></div></div>
   </div>
   <div class="ground"><div class="ground-top"></div><div class="ground-body"></div></div>
 
