@@ -188,8 +188,8 @@ window.addEventListener('resize', resizeCanvas);
 
 // ==================== IMAGE LOADING ====================
 const images = {};
-const imageFiles = ['hero', 'goomba1', 'goomba2', 'goomba3', 'koopa1', 'koopa2', 'queen', 'april-fool'];
-const imageExtensions = { 'april-fool': 'jpg' };
+const imageFiles = ['hero', 'goomba1', 'goomba2', 'goomba3', 'koopa1', 'koopa2', 'queen', 'april-fool', 'lyari-bg'];
+const imageExtensions = { 'april-fool': 'jpg', 'lyari-bg': 'jpg' };
 let imagesLoaded = 0;
 
 imageFiles.forEach(name => {
@@ -1213,9 +1213,32 @@ function drawHearts(cx, cy) {
 }
 
 function draw() {
-  // Sky — solid NES blue
+  // Sky background — Lyari Town fades to Mario sky
+  const firstEnemyX = 22 * TILE; // First enemy position
+  const fadeStart = 15 * TILE;   // Start fading before first enemy
+  const fadeEnd = 30 * TILE;     // Fully Mario sky by here
+  let lyariAlpha = 1;
+
+  if (player && gameState === 'PLAYING') {
+    if (player.x >= fadeEnd) lyariAlpha = 0;
+    else if (player.x > fadeStart) lyariAlpha = 1 - (player.x - fadeStart) / (fadeEnd - fadeStart);
+  } else if (gameState !== 'START') {
+    lyariAlpha = 0; // No Lyari bg on death/game over/level complete
+  }
+
+  // Draw Mario sky first
   ctx.fillStyle = C.SKY;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  // Overlay Lyari BG on top with alpha
+  if (lyariAlpha > 0 && images['lyari-bg'] && images['lyari-bg'].complete) {
+    ctx.save();
+    ctx.globalAlpha = lyariAlpha;
+    // Draw to fill the sky area (above ground)
+    const groundY = CANVAS_HEIGHT - TILE * 2;
+    ctx.drawImage(images['lyari-bg'], 0, 0, CANVAS_WIDTH, groundY);
+    ctx.restore();
+  }
 
   drawClouds();
   drawHills();
