@@ -154,6 +154,7 @@ function playNote(freq, start, duration, type, vol, dest) {
 
 // Sound effects
 function playSFX(type) {
+  ensureAudio();
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
   if (type === 'jump') {
@@ -188,8 +189,10 @@ function playSFX(type) {
 
 // Mario Overworld Theme (chiptune approximation)
 function playOverworldMusic() {
+  ensureAudio();
   if (!audioCtx) return;
   stopMusic();
+  ensureAudio();
   musicPlaying = true;
 
   const bpm = 200;
@@ -251,8 +254,8 @@ function playOverworldMusic() {
 
 // Dhurandhar Title Theme (dramatic Bollywood-style chiptune)
 function playTitleMusic() {
+  ensureAudio();
   if (!audioCtx) return;
-  stopMusic();
   musicPlaying = true;
 
   const bpm = 120;
@@ -303,6 +306,18 @@ function playTitleMusic() {
 function stopMusic() {
   musicPlaying = false;
   if (currentMusic) { clearTimeout(currentMusic); currentMusic = null; }
+  // Close and recreate audio context to kill all lingering oscillators
+  if (audioCtx && audioCtx.state !== 'closed') {
+    audioCtx.close().then(() => { audioCtx = null; }).catch(() => { audioCtx = null; });
+  } else {
+    audioCtx = null;
+  }
+}
+
+function ensureAudio() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
 }
 
 // ==================== INPUT ====================
@@ -466,6 +481,10 @@ function rectCollide(a, b) {
 function getAllSolids() {
   return [...groundSegments, ...platforms, ...pipes, ...blocks];
 }
+function getSolidsNear(x, range) {
+  const minX = x - range, maxX = x + range;
+  return getAllSolids().filter(s => s.x + s.w > minX && s.x < maxX);
+}
 function resolveCollisionsX(entity, solids) {
   for (let s of solids) {
     if (!rectCollide(entity, s)) continue;
@@ -538,7 +557,10 @@ function updateMushrooms() {
 function update() {
   if (gameState === 'START') {
     if (!titleMusicStarted && audioCtx) { playTitleMusic(); titleMusicStarted = true; }
-    if (keysJustPressed['Space']) { stopMusic(); startGame(); playOverworldMusic(); }
+    if (keysJustPressed['Space']) {
+      stopMusic(); startGame(); playOverworldMusic();
+      Object.keys(keysJustPressed).forEach(k => keysJustPressed[k] = false);
+    }
     keysJustPressed['Space'] = false;
     return;
   }
@@ -576,7 +598,7 @@ function update() {
   keysJustPressed['Space'] = false; keysJustPressed['ArrowUp'] = false;
 
   player.vy += GRAVITY;
-  const solids = getAllSolids().filter(s => !(s.type==='brick'&&s.hit));
+  const solids = getSolidsNear(player.x, CANVAS_WIDTH).filter(s => !(s.type==='brick'&&s.hit));
   player.x += player.vx;
   if (player.x<0) { player.x=0; player.vx=0; }
   if (player.x>LEVEL_WIDTH-player.w) player.x=LEVEL_WIDTH-player.w;
@@ -599,21 +621,21 @@ function update() {
   blocks.forEach(b => { if (b.animY<0) b.animY+=1; if (b.animY>0) b.animY=0; });
 
   // Enemies
-  const activeSolids = getAllSolids().filter(s => !(s.type==='brick'&&s.hit));
   enemies.forEach(enemy => {
     if (!enemy.alive) { if (enemy.squishTimer>0) enemy.squishTimer--; return; }
     if (Math.abs(enemy.x-player.x) > CANVAS_WIDTH*2) return;
+    const eSolids = getSolidsNear(enemy.x, TILE*6).filter(s => !(s.type==='brick'&&s.hit));
     if (enemy.isShell && !enemy.shellMoving) {
-      enemy.vy+=GRAVITY; enemy.y+=enemy.vy; resolveCollisionsY(enemy,activeSolids,false); return;
+      enemy.vy+=GRAVITY; enemy.y+=enemy.vy; resolveCollisionsY(enemy,eSolids,false); return;
     }
     enemy.vy+=GRAVITY;
-    const pv=enemy.vx; enemy.x+=enemy.vx; resolveCollisionsX(enemy,activeSolids);
+    const pv=enemy.vx; enemy.x+=enemy.vx; resolveCollisionsX(enemy,eSolids);
     if (enemy.vx===0&&pv!==0) { enemy.vx=-pv; enemy.facingRight=enemy.vx>0; }
-    enemy.y+=enemy.vy; resolveCollisionsY(enemy,activeSolids,false);
+    enemy.y+=enemy.vy; resolveCollisionsY(enemy,eSolids,false);
     if (!enemy.isShell && enemy.onGround) {
       const nx=enemy.vx>0?enemy.x+enemy.w+2:enemy.x-2;
       let edge=true;
-      for (let s of activeSolids) { if(nx>=s.x&&nx<=s.x+s.w&&enemy.y+enemy.h>=s.y&&enemy.y+enemy.h<=s.y+4){edge=false;break;}}
+      for (let s of eSolids) { if(nx>=s.x&&nx<=s.x+s.w&&enemy.y+enemy.h>=s.y&&enemy.y+enemy.h<=s.y+4){edge=false;break;}}
       if (edge) { enemy.vx=-enemy.vx; enemy.facingRight=enemy.vx>0; }
     }
     if (enemy.isShell&&enemy.shellMoving) {
@@ -629,7 +651,7 @@ function update() {
     if (!rectCollide(player,enemy)) return;
     if (player.invincible>60) { enemy.alive=false; enemy.squishTimer=15; score+=200; spawnStompParticle(enemy.x+enemy.w/2,enemy.y); playSFX('stomp'); return; }
     if (player.invincible>0) return;
-    if (player.vy>0 && player.y+player.h-enemy.y<20) {
+    if (player.vy>0 && player.y+player.h-enemy.y<28) {
       player.vy=JUMP_FORCE*0.6; playSFX('stomp');
       if (enemy.type==='goomba') { enemy.alive=false; enemy.squishTimer=20; score+=100; spawnStompParticle(enemy.x+enemy.w/2,enemy.y); }
       else if (enemy.type==='koopa') {
@@ -1164,7 +1186,11 @@ function drawStartScreen() {
   ctx.fillText('Press SPACE to Start',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+110);
 
   ctx.fillStyle='#AAA'; ctx.font='16px "Courier New", monospace';
-  ctx.fillText('Arrow Keys = Move    SPACE = Jump',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+150);
+  ctx.fillText('Arrow Keys = Move    SPACE = Jump    ESC = Quit',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+150);
+  if (!audioCtx) {
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='14px "Courier New", monospace';
+    ctx.fillText('Press any key to enable sound',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+180);
+  }
 }
 
 function drawGameOver() {
@@ -1185,28 +1211,22 @@ function init() { gameLoop(); }
 // Close button — stops all audio and closes
 document.getElementById('close-btn').addEventListener('click', () => {
   stopMusic();
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
-  // Try to close the tab/window. If browser blocks it, show a message.
   window.close();
-  // Fallback: blank the page if window.close() is blocked
   setTimeout(() => {
     document.body.innerHTML = '<div style="color:#F8F8F8;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;font-size:24px;">Game closed. You can close this tab.</div>';
   }, 200);
 });
 
 // Also stop music if user navigates away or closes tab
-window.addEventListener('beforeunload', () => {
-  stopMusic();
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
-});
+window.addEventListener('beforeunload', () => { stopMusic(); });
 
-// Escape key also closes
+// Escape key — pause/return to title
 window.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     stopMusic();
-    if (audioCtx) { audioCtx.close(); audioCtx = null; }
     gameState = 'START';
     titleMusicStarted = false;
+    score = 0; coins = 0; lives = 3;
   }
 });
 
