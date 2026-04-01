@@ -43,11 +43,79 @@ canvas {
 #close-btn:hover {
   background: rgba(200,0,0,0.8);
 }
+/* April Fool Overlay */
+#april-overlay {
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  z-index:200; background:linear-gradient(135deg,#1a1a2e 0%,#0f0f23 100%);
+  flex-direction:column; align-items:center; justify-content:center;
+  font-family:'Courier New',monospace; text-align:center; overflow-y:auto;
+}
+#april-overlay.show { display:flex; }
+#april-overlay img {
+  width:min(420px,85vw); border-radius:16px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.5); margin-bottom:24px;
+}
+#april-overlay h1 {
+  font-size:clamp(20px,4vw,36px); color:#F8B800;
+  text-shadow:2px 2px 0 #503000; margin-bottom:8px; letter-spacing:2px;
+}
+#april-overlay p {
+  font-size:clamp(12px,2vw,16px); color:rgba(255,255,255,0.6); margin-bottom:28px;
+}
+.april-buttons { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+.april-btn {
+  font-family:'Courier New',monospace; font-size:14px; font-weight:bold;
+  padding:14px 28px; border:none; border-radius:10px; cursor:pointer;
+  transition:all 0.15s ease; letter-spacing:1px;
+}
+.april-btn:hover { transform:translateY(-3px) scale(1.05); }
+.april-btn:active { transform:translateY(1px) scale(0.98); }
+.btn-linkedin {
+  background:linear-gradient(135deg,#0A66C2,#0052A3); color:#fff;
+  box-shadow:0 4px 0 #003D7A, 0 6px 20px rgba(10,102,194,0.3);
+}
+.btn-linkedin:hover { box-shadow:0 6px 0 #003D7A, 0 10px 30px rgba(10,102,194,0.5); }
+.btn-copy {
+  background:linear-gradient(135deg,#444,#333); color:#fff;
+  box-shadow:0 4px 0 #222, 0 6px 20px rgba(0,0,0,0.3);
+}
+.btn-copy:hover { box-shadow:0 6px 0 #222, 0 10px 30px rgba(0,0,0,0.5); }
+.btn-home {
+  background:transparent; color:rgba(255,255,255,0.5);
+  border:2px solid rgba(255,255,255,0.2); font-size:12px; padding:10px 24px;
+}
+.btn-home:hover { color:#fff; border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.05); }
+.copied-toast {
+  position:fixed; bottom:30px; left:50%; transform:translateX(-50%);
+  background:#22cc44; color:#fff; padding:10px 24px; border-radius:8px;
+  font-size:13px; font-weight:bold; opacity:0; transition:opacity 0.3s;
+  z-index:300;
+}
+.copied-toast.show { opacity:1; }
+/* Confetti */
+.confetti { position:fixed; top:-10px; width:10px; height:10px; z-index:210; pointer-events:none; animation:confettiFall linear forwards; }
+@keyframes confettiFall {
+  0% { transform:translateY(0) rotate(0deg); opacity:1; }
+  100% { transform:translateY(110vh) rotate(720deg); opacity:0; }
+}
 </style>
 </head>
 <body>
 <button id="close-btn" title="Close Game">✕</button>
 <canvas id="game"></canvas>
+
+<!-- April Fool HTML Overlay -->
+<div id="april-overlay">
+  <img src="assets/april-fool.jpg" alt="April Fool!">
+  <h1>HAPPY APRIL FOOLS' DAY!</h1>
+  <p>You really thought you won $1000? 😂</p>
+  <div class="april-buttons">
+    <button class="april-btn btn-linkedin" id="btn-share-linkedin">Share on LinkedIn</button>
+    <button class="april-btn btn-copy" id="btn-copy-link">Copy Link</button>
+  </div>
+  <button class="april-btn btn-home" id="btn-home">HOME</button>
+</div>
+<div class="copied-toast" id="copied-toast">Link Copied!</div>
 <script>
 // ==================== CONSTANTS ====================
 const CANVAS_WIDTH = 768;
@@ -1410,47 +1478,9 @@ function draw() {
       window._voucherBtn = {x:btnX,y:btnY,w:btnW,h:btnH};
     }
 
-    // April Fool screen (after clicking voucher)
+    // April Fool screen — handled by HTML overlay (not canvas)
     if (showAprilFool) {
-      ctx.fillStyle='#F5F0C8'; ctx.fillRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
-
-      // Draw chimp image
-      if (images['april-fool'] && images['april-fool'].complete) {
-        const imgW=320, imgH=240;
-        ctx.drawImage(images['april-fool'], CANVAS_WIDTH/2-imgW/2, CANVAS_HEIGHT/2-imgH/2-30, imgW, imgH);
-      }
-
-      ctx.fillStyle='#333'; ctx.font='bold 32px "Courier New", monospace'; ctx.textAlign='center';
-      ctx.fillText('HAPPY APRIL FOOLS DAY!',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+160);
-
-      ctx.fillStyle='#666'; ctx.font='16px "Courier New", monospace';
-      ctx.fillText('You really thought you won $1000? 😂',CANVAS_WIDTH/2,CANVAS_HEIGHT/2+195);
-
-      // Share buttons
-      const shareY = CANVAS_HEIGHT/2 + 230;
-      // LinkedIn
-      ctx.fillStyle='#0A66C2';
-      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2-170,shareY,160,36,8); ctx.fill();
-      ctx.fillStyle='#FFF'; ctx.font='bold 14px "Courier New", monospace';
-      ctx.fillText('Share on LinkedIn',CANVAS_WIDTH/2-90,shareY+24);
-
-      // Copy link
-      ctx.fillStyle='#333';
-      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2+10,shareY,160,36,8); ctx.fill();
-      ctx.fillStyle='#FFF';
-      ctx.fillText('Copy Link',CANVAS_WIDTH/2+90,shareY+24);
-
-      // Home button
-      const homeY = shareY + 50;
-      ctx.fillStyle='rgba(255,255,255,0.15)';
-      ctx.beginPath(); ctx.roundRect(CANVAS_WIDTH/2-80,homeY,160,36,8); ctx.fill();
-      ctx.fillStyle='#FFF'; ctx.font='bold 14px "Courier New", monospace';
-      ctx.fillText('HOME',CANVAS_WIDTH/2,homeY+24);
-
-      // Store button bounds
-      window._linkedinBtn = {x:CANVAS_WIDTH/2-170,y:shareY,w:160,h:36};
-      window._copyBtn = {x:CANVAS_WIDTH/2+10,y:shareY,w:160,h:36};
-      window._homeBtn = {x:CANVAS_WIDTH/2-80,y:homeY,w:160,h:36};
+      document.getElementById('april-overlay').classList.add('show');
     }
   }
 }
@@ -1559,28 +1589,56 @@ canvas.addEventListener('click', (e) => {
     showAprilFool = true;
   }
 
-  // LinkedIn share
-  if (showAprilFool && hitTest(window._linkedinBtn)) {
-    const shareUrl = window.location.origin + window.location.pathname.replace('game.html','');
-    const text = "I just played Dhurandhar Mario and fell for the April Fool's prank! 😂🎮 Try it yourself:";
-    window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(shareUrl)+'&summary='+encodeURIComponent(text), '_blank');
-  }
+  // LinkedIn, Copy, Home are now handled by HTML buttons below
+});
 
-  // Copy link
-  if (showAprilFool && hitTest(window._copyBtn)) {
-    const shareUrl = window.location.origin + window.location.pathname.replace('game.html','');
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      window._copyMsg = 'Copied!';
-      setTimeout(() => { window._copyMsg = ''; }, 2000);
-    });
-  }
+// April Fool overlay buttons
+function getShareUrl() { return window.location.origin + window.location.pathname.replace('game.html',''); }
 
-  // Home button
-  if (showAprilFool && hitTest(window._homeBtn)) {
-    stopMusic();
-    window.location.href = 'index.html';
+document.getElementById('btn-share-linkedin').addEventListener('click', () => {
+  const url = getShareUrl();
+  const text = "I just played Dhurandhar Mario and got pranked! 😂🎮 Try beating it yourself — bet you can't win $1000 either:";
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url)+'&summary='+encodeURIComponent(text), '_blank');
+});
+
+document.getElementById('btn-copy-link').addEventListener('click', () => {
+  navigator.clipboard.writeText(getShareUrl()).then(() => {
+    const toast = document.getElementById('copied-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+});
+
+document.getElementById('btn-home').addEventListener('click', () => {
+  stopMusic(); window.location.href = 'index.html';
+});
+
+// Spawn confetti when April Fool overlay shows
+function spawnConfetti() {
+  const colors = ['#F8B800','#F83800','#00A800','#3030DD','#FF8CAD','#FFF'];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random()*100+'%';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.width = (6+Math.random()*8)+'px';
+    c.style.height = (6+Math.random()*8)+'px';
+    c.style.borderRadius = Math.random()>0.5?'50%':'2px';
+    c.style.animationDuration = (2+Math.random()*3)+'s';
+    c.style.animationDelay = (Math.random()*2)+'s';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 6000);
+  }
+}
+
+// Watch for April Fool reveal
+const aprilObserver = new MutationObserver(() => {
+  if (document.getElementById('april-overlay').classList.contains('show')) {
+    spawnConfetti();
+    aprilObserver.disconnect();
   }
 });
+aprilObserver.observe(document.getElementById('april-overlay'), {attributes:true, attributeFilter:['class']});
 
 // Close button — stops all audio and closes
 document.getElementById('close-btn').addEventListener('click', () => {
